@@ -55,6 +55,9 @@ test(unsigned int                                          size_approx,
   for (unsigned int i = 0; i < mask_rep; ++i)
     masks[i] = mask;
 
+  for (unsigned int i = mask_rep; i < VectorizedArray<Number>::size(); ++i)
+    masks[i] = internal::MatrixFreeFunctions::ConstraintKinds::unconstrained;
+
   double min_time = 1e10;
 
   for (unsigned r = 0; r < 10; ++r)
@@ -67,7 +70,7 @@ test(unsigned int                                          size_approx,
           for (unsigned int j = 0; j < n_dofs_per_cell; ++j)
             values[j] = global_values[i + j];
 
-          internal::FEEvaluationImplHangingNodes<
+          internal::MyFEEvaluationImplHangingNodes<
             dim,
             VectorizedArrayType,
             false>::template run<degree, degree + 1>(1,

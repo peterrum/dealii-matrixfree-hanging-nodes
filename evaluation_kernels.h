@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii_matrix_free_evaluation_kernels_h
-#define dealii_matrix_free_evaluation_kernels_h
+#ifndef dealii_matrix_free_evaluation_kernels_h_
+#define dealii_matrix_free_evaluation_kernels_h_
 
 #include <deal.II/base/config.h>
 
@@ -44,7 +44,7 @@ class FEEvaluationBaseData;
 namespace internal
 {
   template <int dim, typename Number, bool is_face>
-  struct FEEvaluationImplHangingNodes
+  struct MyFEEvaluationImplHangingNodes
   {
     template <int fe_degree, int n_q_points_1d>
     static bool
@@ -74,7 +74,7 @@ namespace internal
 
   private:
     template <int fe_degree, unsigned int side, bool transpose>
-    static void
+    static inline DEAL_II_ALWAYS_INLINE void
     interpolate_2D(const unsigned int given_degree,
                    bool               is_subface_0,
                    const unsigned int v,
@@ -97,7 +97,7 @@ namespace internal
               unsigned int side,
               bool         transpose,
               bool         is_subface_0>
-    static void
+    static inline DEAL_II_ALWAYS_INLINE void
     interpolate_2D(const unsigned int given_degree,
                    const unsigned int v,
                    const Number *     weight,
@@ -144,7 +144,7 @@ namespace internal
               unsigned int direction,
               unsigned int side,
               bool         transpose>
-    static void
+    static inline DEAL_II_ALWAYS_INLINE void
     interpolate_3D_face(const unsigned int dof_offset,
                         const unsigned int given_degree,
                         bool               is_subface_0,
@@ -165,7 +165,7 @@ namespace internal
               unsigned int side,
               bool         transpose,
               bool         is_subface_0>
-    static void
+    static inline DEAL_II_ALWAYS_INLINE void
     interpolate_3D_face(const unsigned int dof_offset,
                         const unsigned int given_degree,
                         const unsigned int v,
@@ -214,7 +214,7 @@ namespace internal
     }
 
     template <int fe_degree, unsigned int direction, bool transpose>
-    static void
+    static inline DEAL_II_ALWAYS_INLINE void
     interpolate_3D_edge(const unsigned int p,
                         const unsigned int given_degree,
                         bool               is_subface_0,
@@ -234,7 +234,7 @@ namespace internal
               unsigned int direction,
               bool         transpose,
               bool         is_subface_0>
-    static void
+    static inline DEAL_II_ALWAYS_INLINE void
     interpolate_3D_edge(const unsigned int p,
                         const unsigned int given_degree,
                         const unsigned int v,
@@ -287,14 +287,6 @@ namespace internal
         fe_degree != -1 ? fe_degree :
                           fe_eval.get_shape_info().data.front().fe_degree;
 
-      const auto is_set = [](const auto a, const auto b) -> bool {
-        return (a & b) == b;
-      };
-
-      const auto not_set = [](const auto a, const auto b) -> bool {
-        return (a & b) == MatrixFreeFunctions::ConstraintKinds::unconstrained;
-      };
-
       const unsigned int points = given_degree + 1;
 
       for (unsigned int c = 0; c < n_desired_components; ++c)
@@ -306,8 +298,14 @@ namespace internal
               if (mask == MatrixFreeFunctions::ConstraintKinds::unconstrained)
                 continue;
 
+              // std::cout << static_cast<std::uint16_t>(mask) << std::endl;
+
               if (dim == 2) // 2D: only faces
                 {
+                  const auto is_set = [](const auto a, const auto b) -> bool {
+                    return (a & b) == b;
+                  };
+
                   // direction 0:
                   if ((mask & MatrixFreeFunctions::ConstraintKinds::face_y) !=
                       MatrixFreeFunctions::ConstraintKinds::unconstrained)
@@ -368,111 +366,128 @@ namespace internal
                     points * points * points - points * points + points - 1;
                   const unsigned int p6 = points * points * points - points;
 
-                  const bool is_face_0 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::face_x) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_x);
-                  const bool is_face_1 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::face_x) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_x);
-                  const bool is_face_2 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::face_y) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_y);
-                  const bool is_face_3 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::face_y) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_y);
-                  const bool is_face_4 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::face_z) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_face_5 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::face_z) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
+                  const auto m = static_cast<std::uint16_t>(mask);
 
-                  const bool is_edge_2 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_yz) &&
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::type_y) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_edge_3 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_yz) &&
-                    not_set(mask,
-                            MatrixFreeFunctions::ConstraintKinds::type_y) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_edge_6 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_yz) &&
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::type_y) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_edge_7 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_yz) &&
-                    not_set(mask,
-                            MatrixFreeFunctions::ConstraintKinds::type_y) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
+                  const bool type_x  = (m >> 0) & 1;
+                  const bool type_y  = (m >> 1) & 1;
+                  const bool type_z  = (m >> 2) & 1;
+                  const bool face_x  = (m >> 3) & 1;
+                  const bool face_y  = (m >> 4) & 1;
+                  const bool face_z  = (m >> 5) & 1;
+                  const bool edge_xy = (m >> 6) & 1;
+                  const bool edge_yz = (m >> 7) & 1;
+                  const bool edge_zx = (m >> 8) & 1;
 
-                  const bool is_edge_0 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_zx) &&
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_edge_1 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_zx) &&
-                    not_set(mask,
-                            MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_edge_4 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_zx) &&
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
-                  const bool is_edge_5 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_zx) &&
-                    not_set(mask,
-                            MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_z);
+                  const bool is_face_0 = (face_x && type_x);
+                  const bool is_face_1 = (face_x && !type_x);
+                  const bool is_face_2 = (face_y && type_y);
+                  const bool is_face_3 = (face_y && !type_y);
+                  const bool is_face_4 = (face_z && type_z);
+                  const bool is_face_5 = (face_z && !type_z);
 
-                  const bool is_edge_8 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_xy) &&
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_y);
-                  const bool is_edge_9 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_xy) &&
-                    not_set(mask,
-                            MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    is_set(mask, MatrixFreeFunctions::ConstraintKinds::type_y);
-                  const bool is_edge_10 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_xy) &&
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_y);
-                  const bool is_edge_11 =
-                    is_set(mask,
-                           MatrixFreeFunctions::ConstraintKinds::edge_xy) &&
-                    not_set(mask,
-                            MatrixFreeFunctions::ConstraintKinds::type_x) &&
-                    not_set(mask, MatrixFreeFunctions::ConstraintKinds::type_y);
+                  const bool is_edge_2  = (edge_yz && type_y && type_z);
+                  const bool is_edge_3  = (edge_yz && !type_y && type_z);
+                  const bool is_edge_6  = (edge_yz && type_y && !type_z);
+                  const bool is_edge_7  = (edge_yz && !type_y && !type_z);
+                  const bool is_edge_0  = (edge_zx && type_x && type_z);
+                  const bool is_edge_1  = (edge_zx && !type_x && type_z);
+                  const bool is_edge_4  = (edge_zx && type_x && !type_z);
+                  const bool is_edge_5  = (edge_zx && !type_x && !type_z);
+                  const bool is_edge_8  = (edge_xy && type_x && type_y);
+                  const bool is_edge_9  = (edge_xy && !type_x && type_y);
+                  const bool is_edge_10 = (edge_xy && type_x && !type_y);
+                  const bool is_edge_11 = (edge_xy && !type_x && !type_y);
+
+                  static std::array<unsigned int, 12> line_to_point = {{
+                    p0, // 0
+                    p1, // 1
+                    p0, // 2
+                    p2, // 3
+                    p4, // 4
+                    p5, // 5
+                    p4, // 6
+                    p6, // 7
+                    p0, // 8
+                    p1, // 9
+                    p2, // 10
+                    p3  // 11
+                  }};
+
+                  static std::array<std::array<std::array<unsigned int, 2>, 2>,
+                                    3>
+                    line = {{{{{{7, 6}}, {{3, 2}}}},
+                             {{{{5, 4}}, {{1, 0}}}},
+                             {{{{11, 10}}, {{9, 8}}}}}};
+
+                  if ((m >> 6) > 0)
+                    {
+                      const auto process_edge_x = [&]() {
+                        interpolate_3D_edge<fe_degree, 0, transpose>(
+                          line_to_point[line[0][type_y][type_z]],
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values);
+                      };
+
+                      const auto process_edge_y = [&]() {
+                        interpolate_3D_edge<fe_degree, 1, transpose>(
+                          line_to_point[line[1][type_z][type_x]],
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values);
+                      };
+
+                      const auto process_edge_z = [&]() {
+                        interpolate_3D_edge<fe_degree, 2, transpose>(
+                          line_to_point[line[2][type_x][type_y]],
+                          given_degree,
+                          type_z,
+                          v,
+                          weights,
+                          values);
+                      };
+
+                      switch (m >> 6)
+                        {
+                          case 1:
+                            process_edge_z();
+                            break;
+                          case 2:
+                            process_edge_x();
+                            break;
+                          case 3:
+                            process_edge_x();
+                            process_edge_z();
+                            break;
+                          case 4:
+                            process_edge_y();
+                            break;
+                          case 5:
+                            process_edge_y();
+                            process_edge_z();
+                            break;
+                          case 6:
+                            process_edge_x();
+                            process_edge_y();
+                            process_edge_z();
+                            break;
+                          case 7:
+                            process_edge_y();
+                            break;
+                        }
+
+                      continue;
+                    }
+
+                  AssertThrow(false, ExcNotImplemented());
 
                   // direction 0:
                   {
-                    const bool is_subface_0 =
-                      (mask & MatrixFreeFunctions::ConstraintKinds::type_x) !=
-                      MatrixFreeFunctions::ConstraintKinds::unconstrained;
+                    const bool is_subface_0 = type_x;
 
                     // ... faces
                     if (is_face_2)
@@ -545,9 +560,7 @@ namespace internal
 
                   // direction 1:
                   {
-                    const bool is_subface_0 =
-                      (mask & MatrixFreeFunctions::ConstraintKinds::type_y) !=
-                      MatrixFreeFunctions::ConstraintKinds::unconstrained;
+                    const bool is_subface_0 = type_y;
 
                     // ... faces
                     if (is_face_0)
@@ -620,9 +633,7 @@ namespace internal
 
                   // direction 2:
                   {
-                    const bool is_subface_0 =
-                      (mask & MatrixFreeFunctions::ConstraintKinds::type_z) !=
-                      MatrixFreeFunctions::ConstraintKinds::unconstrained;
+                    const bool is_subface_0 = type_z;
 
                     // ... faces
                     if (is_face_0)
