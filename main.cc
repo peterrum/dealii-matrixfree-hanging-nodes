@@ -115,6 +115,7 @@ main(int argc, char **argv)
 
   const std::vector<internal::MatrixFreeFunctions::ConstraintKinds> masks{
     unconstrained,                      // unconstrained
+    edge_yz | edge_zx | edge_xy,        // edge 2
     edge_yz | type_y | type_z,          // edge 2
     edge_yz | type_y | type_z | type_x, //
     edge_yz | type_z,                   // edge 3
@@ -147,7 +148,7 @@ main(int argc, char **argv)
     face_z                              // face 5
   };
 
-  const unsigned precomp_degree = 1;
+  const unsigned precomp_degree = 4;
 
   AssertDimension(precomp_degree, degree);
 
