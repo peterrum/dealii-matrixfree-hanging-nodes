@@ -11,12 +11,13 @@
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
+#include "evaluation_kernels.h"
+
 using namespace dealii;
 
-template <int dim>
+template <int dim, int degree>
 void
-test(const unsigned int                                    degree,
-     unsigned int                                          size_approx,
+test(unsigned int                                          size_approx,
      const internal::MatrixFreeFunctions::ConstraintKinds &mask,
      const unsigned int                                    mask_rep)
 {
@@ -40,9 +41,6 @@ test(const unsigned int                                    degree,
 
   FEEvaluation<dim, -1, -1, n_components, Number, VectorizedArrayType> fe_eval(
     matrix_free);
-
-  internal::FEEvaluationHangingNodesFactory<dim, Number, VectorizedArrayType>
-    hn_eval;
 
   const unsigned int n_dofs_per_cell = fe.n_dofs_per_cell();
 
@@ -69,7 +67,14 @@ test(const unsigned int                                    degree,
           for (unsigned int j = 0; j < n_dofs_per_cell; ++j)
             values[j] = global_values[i + j];
 
-          hn_eval.apply(1, degree, fe_eval, false, masks, values.data());
+          internal::FEEvaluationImplHangingNodes<
+            dim,
+            VectorizedArrayType,
+            false>::template run<degree, degree + 1>(1,
+                                                     fe_eval,
+                                                     false,
+                                                     masks,
+                                                     values.data());
 
           for (unsigned int j = 0; j < n_dofs_per_cell; ++j)
             global_values[i + j] = values[j];
@@ -139,10 +144,14 @@ main(int argc, char **argv)
     face_z                              // face 5
   };
 
+  const unsigned precomp_degree = 1;
+
+  AssertDimension(precomp_degree, degree);
+
   for (const auto mask : masks)
     {
       for (unsigned int i = 1; i <= VectorizedArray<double>::size(); ++i)
-        test<3>(degree, size_approx, mask, i);
+        test<3, precomp_degree>(size_approx, mask, i);
       std::cout << std::endl;
     }
 }
