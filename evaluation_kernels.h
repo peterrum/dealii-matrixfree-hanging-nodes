@@ -504,30 +504,102 @@ namespace internal
                           case 0:
                             break;
                           case 1:
-                            process_edge_z();
+                            interpolate_3D_edge<fe_degree, 2, transpose>(
+                              line_to_point[line[2][type_x][type_y]],
+                              given_degree,
+                              type_z,
+                              v,
+                              weights,
+                              values);
                             break;
                           case 2:
-                            process_edge_x();
+                            interpolate_3D_edge<fe_degree, 0, transpose>(
+                              line_to_point[line[0][type_y][type_z]],
+                              given_degree,
+                              type_x,
+                              v,
+                              weights,
+                              values);
                             break;
                           case 3:
-                            process_edge_x();
-                            process_edge_z();
+                            interpolate_3D_edge<fe_degree, 0, transpose>(
+                              line_to_point[line[0][type_y][type_z]],
+                              given_degree,
+                              type_x,
+                              v,
+                              weights,
+                              values);
+                            interpolate_3D_edge<fe_degree, 2, transpose>(
+                              line_to_point[line[2][type_x][type_y]],
+                              given_degree,
+                              type_z,
+                              v,
+                              weights,
+                              values);
                             break;
                           case 4:
-                            process_edge_y();
+                            interpolate_3D_edge<fe_degree, 1, transpose>(
+                              line_to_point[line[1][type_x][type_z]],
+                              given_degree,
+                              type_y,
+                              v,
+                              weights,
+                              values);
                             break;
                           case 5:
-                            process_edge_y();
-                            process_edge_z();
+                            interpolate_3D_edge<fe_degree, 1, transpose>(
+                              line_to_point[line[1][type_x][type_z]],
+                              given_degree,
+                              type_y,
+                              v,
+                              weights,
+                              values);
+                            interpolate_3D_edge<fe_degree, 2, transpose>(
+                              line_to_point[line[2][type_x][type_y]],
+                              given_degree,
+                              type_z,
+                              v,
+                              weights,
+                              values);
                             break;
                           case 6:
-                            process_edge_x();
-                            process_edge_y();
+                            interpolate_3D_edge<fe_degree, 0, transpose>(
+                              line_to_point[line[0][type_y][type_z]],
+                              given_degree,
+                              type_x,
+                              v,
+                              weights,
+                              values);
+                            interpolate_3D_edge<fe_degree, 1, transpose>(
+                              line_to_point[line[1][type_x][type_z]],
+                              given_degree,
+                              type_y,
+                              v,
+                              weights,
+                              values);
                             break;
                           case 7:
-                            process_edge_x();
-                            process_edge_y();
-                            process_edge_z();
+                            interpolate_3D_edge<fe_degree, 0, transpose>(
+                              line_to_point[line[0][type_y][type_z]],
+                              given_degree,
+                              type_x,
+                              v,
+                              weights,
+                              values);
+                            interpolate_3D_edge<fe_degree, 1, transpose>(
+                              line_to_point[line[1][type_x][type_z]],
+                              given_degree,
+                              type_y,
+                              v,
+                              weights,
+                              values);
+                            interpolate_3D_edge<fe_degree, 2, transpose>(
+                              line_to_point[line[2][type_x][type_y]],
+                              given_degree,
+                              type_z,
+                              v,
+                              weights,
+                              values);
                             break;
                         }
                     }
