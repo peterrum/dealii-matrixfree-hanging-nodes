@@ -467,29 +467,17 @@ namespace internal
                   const auto faces = (m >> 3) & 7;
                   const auto edges = (m >> 6);
 
-                  if (edges > 0)
+                  if (true || edges > 0)
                     {
-                      const auto process_edge_x = [&]() {
-                        interpolate_3D_edge<fe_degree, 0, transpose>(
-                          line_to_point[line[0][type_y][type_z]],
-                          given_degree,
-                          type_x,
-                          v,
-                          weights,
-                          values);
-                      };
+                      static const void *s[8] = {
+                        &&end, &&s1, &&s2, &&s3, &&s4, &&s5, &&s6, &&s7};
 
-                      const auto process_edge_y = [&]() {
-                        interpolate_3D_edge<fe_degree, 1, transpose>(
-                          line_to_point[line[1][type_x][type_z]],
-                          given_degree,
-                          type_y,
-                          v,
-                          weights,
-                          values);
-                      };
+                      goto *s[edges];
 
-                      const auto process_edge_z = [&]() {
+                      {
+                      s0:
+                        goto end;
+                      s1:
                         interpolate_3D_edge<fe_degree, 2, transpose>(
                           line_to_point[line[2][type_x][type_y]],
                           given_degree,
@@ -497,118 +485,185 @@ namespace internal
                           v,
                           weights,
                           values);
-                      };
-                      
-                      static const void *s[8] = {&&s0, &&s1, &&s2, &&s3, &&s4, &&s5, &&s6, &&s7};
+                        goto end;
+                      s2:
+                        interpolate_3D_edge<fe_degree, 0, transpose>(
+                          line_to_point[line[0][type_y][type_z]],
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values);
+                        goto end;
+                      s3:
+                        interpolate_3D_edge<fe_degree, 0, transpose>(
+                          line_to_point[line[0][type_y][type_z]],
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values);
+                        interpolate_3D_edge<fe_degree, 2, transpose>(
+                          line_to_point[line[2][type_x][type_y]],
+                          given_degree,
+                          type_z,
+                          v,
+                          weights,
+                          values);
+                        goto end;
+                      s4:
+                        interpolate_3D_edge<fe_degree, 1, transpose>(
+                          line_to_point[line[1][type_x][type_z]],
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values);
+                        goto end;
+                      s5:
+                        interpolate_3D_edge<fe_degree, 1, transpose>(
+                          line_to_point[line[1][type_x][type_z]],
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values);
+                        interpolate_3D_edge<fe_degree, 2, transpose>(
+                          line_to_point[line[2][type_x][type_y]],
+                          given_degree,
+                          type_z,
+                          v,
+                          weights,
+                          values);
+                        goto end;
+                      s6:
+                        interpolate_3D_edge<fe_degree, 0, transpose>(
+                          line_to_point[line[0][type_y][type_z]],
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values);
+                        interpolate_3D_edge<fe_degree, 1, transpose>(
+                          line_to_point[line[1][type_x][type_z]],
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values);
+                        goto end;
+                      s7:
+                        interpolate_3D_edge<fe_degree, 0, transpose>(
+                          line_to_point[line[0][type_y][type_z]],
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values);
+                        interpolate_3D_edge<fe_degree, 1, transpose>(
+                          line_to_point[line[1][type_x][type_z]],
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values);
+                        interpolate_3D_edge<fe_degree, 2, transpose>(
+                          line_to_point[line[2][type_x][type_y]],
+                          given_degree,
+                          type_z,
+                          v,
+                          weights,
+                          values);
+                        goto end;
+                      }
 
-                      goto *s[edges];
-
-                        {
-                          s0:
-                            goto end;
-                          s1:
-                            process_edge_z();
-                            goto end;
-                          s2:
-                            process_edge_x();
-                            goto end;
-                          s3:
-                            process_edge_x();
-                            process_edge_z();
-                            goto end;
-                          s4:
-                            process_edge_y();
-                            goto end;
-                          s5:
-                            process_edge_y();
-                            process_edge_z();
-                            goto end;
-                          s6:
-                            process_edge_x();
-                            process_edge_y();
-                            goto end;
-                          s7:
-                            process_edge_x();
-                            process_edge_y();
-                            process_edge_z();
-                            goto end;
-                        }
-                      
-                              end:
-                        (void) edges;
+                    end:
+                      (void)edges;
                     }
-/*
-                  if (faces > 0)
+
+                  if (true || faces > 0)
                     {
-                      switch (faces)
-                        {
-                          case 0:
-                            break;
-                          case 1:
-                            interpolate_3D_face_all<fe_degree, 1, 0, transpose>(
-                              p0,
-                              given_degree,
-                              type_y,
-                              v,
-                              weights,
-                              values); // face 0
+                      static const void *s[8] = {&&end_,
+                                                 &&s1_,
+                                                 &&s2_,
+                                                 &&s3_,
+                                                 &&s4_,
+                                                 &&s5_,
+                                                 &&s6_,
+                                                 &&s7_};
 
-                            interpolate_3D_face_all<fe_degree, 2, 0, transpose>(
-                              p0,
-                              given_degree,
-                              type_z,
-                              v,
-                              weights,
-                              values); // face 0
+                      goto *s[faces];
 
-                            break;
-                          case 2:
-                            interpolate_3D_face_all<fe_degree, 0, 2, transpose>(
-                              p0,
-                              given_degree,
-                              type_x,
-                              v,
-                              weights,
-                              values); // face 2
+                      {
+                      s0_:
+                        goto end_;
+                      s1_:
+                        interpolate_3D_face_all<fe_degree, 1, 0, transpose>(
+                          p0,
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values); // face 0
 
-                            interpolate_3D_face_all<fe_degree, 2, 2, transpose>(
-                              p0,
-                              given_degree,
-                              type_z,
-                              v,
-                              weights,
-                              values); // face 2
+                        interpolate_3D_face_all<fe_degree, 2, 0, transpose>(
+                          p0,
+                          given_degree,
+                          type_z,
+                          v,
+                          weights,
+                          values); // face 0
 
-                            break;
-                          case 3:
-                            break;
-                          case 4:
-                            interpolate_3D_face_all<fe_degree, 0, 4, transpose>(
-                              p0,
-                              given_degree,
-                              type_x,
-                              v,
-                              weights,
-                              values); // face 4
+                        goto end_;
+                      s2_:
+                        interpolate_3D_face_all<fe_degree, 0, 2, transpose>(
+                          p0,
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values); // face 2
 
-                            interpolate_3D_face_all<fe_degree, 1, 4, transpose>(
-                              p0,
-                              given_degree,
-                              type_y,
-                              v,
-                              weights,
-                              values); // face 4
+                        interpolate_3D_face_all<fe_degree, 2, 2, transpose>(
+                          p0,
+                          given_degree,
+                          type_z,
+                          v,
+                          weights,
+                          values); // face 2
 
-                            break;
-                          case 5:
-                            break;
-                          case 6:
-                            break;
-                          case 7:
-                            break;
-                        }
+                        goto end_;
+                      s3_:
+                        goto end_;
+                      s4_:
+                        interpolate_3D_face_all<fe_degree, 0, 4, transpose>(
+                          p0,
+                          given_degree,
+                          type_x,
+                          v,
+                          weights,
+                          values); // face 4
+
+                        interpolate_3D_face_all<fe_degree, 1, 4, transpose>(
+                          p0,
+                          given_degree,
+                          type_y,
+                          v,
+                          weights,
+                          values); // face 4
+
+                        goto end_;
+                      s5_:
+                        goto end_;
+                      s6_:
+                        goto end_;
+                      s7_:
+                        goto end_;
+                      }
+
+                    end_:
+                      (void)faces;
                     }
- */
                 }
               else
                 {
