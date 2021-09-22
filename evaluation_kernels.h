@@ -498,40 +498,46 @@ namespace internal
                           weights,
                           values);
                       };
+                      
+                      static const void *s[8] = {&&s0, &&s1, &&s2, &&s3, &&s4, &&s5, &&s6, &&s7};
 
-                      switch (edges)
+                      goto *s[edges];
+
                         {
-                          case 0:
-                            break;
-                          case 1:
+                          s0:
+                            goto end;
+                          s1:
                             process_edge_z();
-                            break;
-                          case 2:
+                            goto end;
+                          s2:
                             process_edge_x();
-                            break;
-                          case 3:
+                            goto end;
+                          s3:
                             process_edge_x();
                             process_edge_z();
-                            break;
-                          case 4:
+                            goto end;
+                          s4:
                             process_edge_y();
-                            break;
-                          case 5:
-                            process_edge_y();
-                            process_edge_z();
-                            break;
-                          case 6:
-                            process_edge_x();
-                            process_edge_y();
-                            break;
-                          case 7:
-                            process_edge_x();
+                            goto end;
+                          s5:
                             process_edge_y();
                             process_edge_z();
-                            break;
+                            goto end;
+                          s6:
+                            process_edge_x();
+                            process_edge_y();
+                            goto end;
+                          s7:
+                            process_edge_x();
+                            process_edge_y();
+                            process_edge_z();
+                            goto end;
                         }
+                      
+                              end:
+                        (void) edges;
                     }
-
+/*
                   if (faces > 0)
                     {
                       switch (faces)
@@ -602,6 +608,7 @@ namespace internal
                             break;
                         }
                     }
+ */
                 }
               else
                 {
