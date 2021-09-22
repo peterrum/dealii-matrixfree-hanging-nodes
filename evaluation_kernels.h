@@ -499,37 +499,42 @@ namespace internal
                           values);
                       };
 
-                      switch (edges)
-                        {
-                          case 0:
-                            break;
-                          case 1:
+                      if (edges == 0)
+                      {
+                      }
+                      else if(edges == 1)
+                      {
+                        process_edge_z();
+                      }
+                      else if(edges == 2)
+                      {
+                            process_edge_x();
+                      }
+                      else if(edges == 3)
+                      {
+                            process_edge_x();
                             process_edge_z();
-                            break;
-                          case 2:
-                            process_edge_x();
-                            break;
-                          case 3:
-                            process_edge_x();
-                            process_edge_z();
-                            break;
-                          case 4:
+                      }
+                      else if(edges == 4)
+                      {
                             process_edge_y();
-                            break;
-                          case 5:
-                            process_edge_y();
-                            process_edge_z();
-                            break;
-                          case 6:
-                            process_edge_x();
-                            process_edge_y();
-                            break;
-                          case 7:
-                            process_edge_x();
+                      }
+                      else if(edges == 5)
+                      {
                             process_edge_y();
                             process_edge_z();
-                            break;
-                        }
+                      }
+                      else if(edges == 6)
+                      {
+                            process_edge_x();
+                            process_edge_y();
+                      }
+                      else if(edges == 7)
+                      {
+                            process_edge_x();
+                            process_edge_y();
+                            process_edge_z();
+                      }
                     }
 
                   if (faces > 0)
