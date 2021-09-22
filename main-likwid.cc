@@ -13,6 +13,10 @@
 
 #include "evaluation_kernels.h"
 
+#ifdef LIKWID_PERFMON
+#  include <likwid.h>
+#endif
+
 using namespace dealii;
 
 template <int dim, int degree>
@@ -60,10 +64,18 @@ test(unsigned int                                          size_approx,
 
   double min_time = 1e10;
 
-  for (unsigned r = 0; r < 10; ++r)
+#ifdef LIKWID_PERFMON
+  std::string label = "data_" + std::to_string(mask_rep);
+  LIKWID_MARKER_START(label.c_str());
+#endif
+
+  for (unsigned r = 0; r < 100; ++r)
     {
+      MPI_Barrier(MPI_COMM_WORLD);
+
       std::chrono::time_point<std::chrono::system_clock> temp =
         std::chrono::system_clock::now();
+
 
       for (unsigned int i = 0; i < global_values.size(); i += n_dofs_per_cell)
         {
@@ -83,6 +95,8 @@ test(unsigned int                                          size_approx,
             global_values[i + j] = values[j];
         }
 
+      MPI_Barrier(MPI_COMM_WORLD);
+
       min_time =
         std::min<double>(min_time,
                          std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -91,12 +105,26 @@ test(unsigned int                                          size_approx,
                            1e9);
     }
 
-  std::cout << min_time << " ";
+#ifdef LIKWID_PERFMON
+  LIKWID_MARKER_STOP(label.c_str());
+#endif
+
+  min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
+
+  if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+    std::cout << min_time << " ";
 }
 
 int
 main(int argc, char **argv)
 {
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+
+#ifdef LIKWID_PERFMON
+  LIKWID_MARKER_INIT;
+  LIKWID_MARKER_THREADINIT;
+#endif
+
   const unsigned int degree      = argc > 1 ? atoi(argv[1]) : 1;
   const unsigned int size_approx = argc > 2 ? atoi(argv[2]) : 10000;
 
@@ -114,47 +142,26 @@ main(int argc, char **argv)
   const auto edge_zx       = ConstraintKinds::edge_zx;
 
   const std::vector<internal::MatrixFreeFunctions::ConstraintKinds> masks{
-    unconstrained,                      // unconstrained
-    edge_yz | edge_zx | edge_xy,        // edge 2
-    edge_yz | type_y | type_z,          // edge 2
-    edge_yz | type_z,                   // edge 3
-    edge_yz | type_z | type_x,          //
-    edge_yz | type_y,                   // edge 6
-    edge_yz | type_y | type_x,          //
-    edge_yz,                            // edge 7
-    edge_yz | type_x,                   //
-    edge_zx | type_x | type_z,          // edge 0
-    edge_zx | type_x | type_z | type_y, //
-    edge_zx | type_z,                   // edge 1
-    edge_zx | type_z | type_y,          //
-    edge_zx | type_x,                   // edge 4
-    edge_zx | type_x | type_y,          //
-    edge_zx,                            // edge 5
-    edge_zx | type_y,                   //
-    edge_xy | type_x | type_y,          // edge 8
-    edge_xy | type_x | type_y | type_z, //
-    edge_xy | type_y,                   // edge 9
-    edge_xy | type_y | type_z,          //
-    edge_xy | type_x,                   // edge 10
-    edge_xy | type_x | type_z,          //
-    edge_xy,                            // edge 11
-    edge_xy | type_z,                   //
-    face_x | type_x,                    // face 0
-    face_x,                             // face 1
-    face_y | type_y,                    // face 2
-    face_y,                             // face 3
-    face_z | type_z,                    // face 4
-    face_z                              // face 5
-  };
+    unconstrained, edge_yz | type_y | type_z, face_x};
 
-  const unsigned precomp_degree = 6;
+  // const std::vector<internal::MatrixFreeFunctions::ConstraintKinds> masks{
+  //  edge_yz | type_y | type_z};
+
+  const unsigned precomp_degree = 1;
 
   AssertDimension(precomp_degree, degree);
 
   for (const auto mask : masks)
     {
-      for (unsigned int i = 1; i <= VectorizedArray<double>::size(); ++i)
+      for (unsigned int i = VectorizedArray<double>::size();
+           i <= VectorizedArray<double>::size();
+           ++i)
         test<3, precomp_degree>(size_approx, mask, i);
-      std::cout << std::endl;
+      if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+        std::cout << std::endl;
     }
+
+#ifdef LIKWID_PERFMON
+  LIKWID_MARKER_CLOSE;
+#endif
 }
