@@ -118,28 +118,30 @@ main(int argc, char **argv)
     edge_yz | edge_zx | edge_xy,        // edge 2
     edge_yz | type_y | type_z,          // edge 2
     edge_yz | type_y | type_z | type_x, //
-    edge_yz | type_z,                   // edge 3
-    edge_yz | type_z | type_x,          //
-    edge_yz | type_y,                   // edge 6
-    edge_yz | type_y | type_x,          //
-    edge_yz,                            // edge 7
-    edge_yz | type_x,                   //
-    edge_zx | type_x | type_z,          // edge 0
-    edge_zx | type_x | type_z | type_y, //
-    edge_zx | type_z,                   // edge 1
-    edge_zx | type_z | type_y,          //
-    edge_zx | type_x,                   // edge 4
-    edge_zx | type_x | type_y,          //
-    edge_zx,                            // edge 5
-    edge_zx | type_y,                   //
-    edge_xy | type_x | type_y,          // edge 8
-    edge_xy | type_x | type_y | type_z, //
-    edge_xy | type_y,                   // edge 9
-    edge_xy | type_y | type_z,          //
-    edge_xy | type_x,                   // edge 10
-    edge_xy | type_x | type_z,          //
-    edge_xy,                            // edge 11
-    edge_xy | type_z,                   //
+                                        /*
+                                            edge_yz | type_z,                   // edge 3
+                                            edge_yz | type_z | type_x,          //
+                                            edge_yz | type_y,                   // edge 6
+                                            edge_yz | type_y | type_x,          //
+                                            edge_yz,                            // edge 7
+                                            edge_yz | type_x,                   //
+                                            edge_zx | type_x | type_z,          // edge 0
+                                            edge_zx | type_x | type_z | type_y, //
+                                            edge_zx | type_z,                   // edge 1
+                                            edge_zx | type_z | type_y,          //
+                                            edge_zx | type_x,                   // edge 4
+                                            edge_zx | type_x | type_y,          //
+                                            edge_zx,                            // edge 5
+                                            edge_zx | type_y,                   //
+                                            edge_xy | type_x | type_y,          // edge 8
+                                            edge_xy | type_x | type_y | type_z, //
+                                            edge_xy | type_y,                   // edge 9
+                                            edge_xy | type_y | type_z,          //
+                                            edge_xy | type_x,                   // edge 10
+                                            edge_xy | type_x | type_z,          //
+                                            edge_xy,                            // edge 11
+                                            edge_xy | type_z,                   //
+                                         */
     face_x | type_x,                    // face 0
     face_x,                             // face 1
     face_y | type_y,                    // face 2
@@ -148,7 +150,7 @@ main(int argc, char **argv)
     face_z                              // face 5
   };
 
-  const unsigned precomp_degree = 4;
+  const unsigned precomp_degree = 1;
 
   AssertDimension(precomp_degree, degree);
 
