@@ -498,38 +498,38 @@ namespace internal
                           weights,
                           values);
                       };
-
-                      switch (edges)
-                        {
-                          case 0:
-                            break;
-                          case 1:
+                      
+                      static const std::array<std::function<void()>, 8> fus{{
+                                                               [](){},
+                                                               [&](){
                             process_edge_z();
-                            break;
-                          case 2:
+                                                               },
+                                                               [&](){
                             process_edge_x();
-                            break;
-                          case 3:
+                                                               },
+                                                               [&](){
                             process_edge_x();
                             process_edge_z();
-                            break;
-                          case 4:
+                                                               },
+                                                               [&](){
                             process_edge_y();
-                            break;
-                          case 5:
+                                                               },
+                                                               [&](){
                             process_edge_y();
                             process_edge_z();
-                            break;
-                          case 6:
+                                                               },
+                                                               [&](){
                             process_edge_x();
                             process_edge_y();
-                            break;
-                          case 7:
+                                                               },
+                                                               [&](){
                             process_edge_x();
                             process_edge_y();
                             process_edge_z();
-                            break;
-                        }
+                                                               }
+                                                               }};
+                      
+                      fus[edges]();
                     }
 
                   if (faces > 0)
