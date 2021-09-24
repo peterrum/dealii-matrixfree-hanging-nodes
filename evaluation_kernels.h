@@ -393,11 +393,11 @@ namespace internal
     class Helper
     {
     public:
-      inline DEAL_II_ALWAYS_INLINE Helper(const unsigned int                          given_degree,
-             const bool                                  type_x,
-             const bool                                  type_y,
-             const bool                                  type_z,
-             const unsigned int                          v,
+      inline DEAL_II_ALWAYS_INLINE Helper(const unsigned int &                         given_degree,
+             const bool &                                 type_x,
+             const bool &                                 type_y,
+             const bool &                                 type_z,
+             const unsigned int &                         v,
              const std::array<AlignedVector<Number>, 2> &interpolation_matrices,
              const std::array<unsigned int, 12> &        line_to_point,
              const std::array<unsigned int, 6> &         face_to_point,
@@ -413,11 +413,11 @@ namespace internal
         , values(values)
       {}
 
-      const unsigned int                          given_degree;
-      const bool                                  type_x;
-      const bool                                  type_y;
-      const bool                                  type_z;
-      const unsigned int                          v;
+      const unsigned int &                         given_degree;
+      const bool &                                 type_x;
+      const bool &                                 type_y;
+      const bool &                                 type_z;
+      const unsigned int &                         v;
       const std::array<AlignedVector<Number>, 2> &interpolation_matrices;
       const std::array<unsigned int, 12> &        line_to_point;
       const std::array<unsigned int, 6> &         face_to_point;
