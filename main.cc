@@ -117,7 +117,6 @@ main(int argc, char **argv)
     unconstrained,                      // unconstrained
     edge_yz | type_y | type_z,          // edge 2
     edge_yz | type_y | type_z | type_x, //
-    /*
     edge_yz | type_z,                   // edge 3
     edge_yz | type_z | type_x,          //
     edge_yz | type_y,                   // edge 6
@@ -140,7 +139,6 @@ main(int argc, char **argv)
     edge_xy | type_x | type_z,          //
     edge_xy,                            // edge 11
     edge_xy | type_z,                   //
-     */
     face_x | type_x,                    // face 0
     face_x,                             // face 1
     face_y | type_y,                    // face 2
