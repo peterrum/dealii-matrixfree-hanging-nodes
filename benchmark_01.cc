@@ -38,9 +38,13 @@ run(const std::string  geometry_type,
       table.add_value("n_macro_cells_hn", info.n_macro_cells_hn);
 
       const auto compute_cost = [&](const auto t_n, const auto t_hn) {
-        return (t_hn / (t_n / (info.n_cells_n + info.n_cells_hn)) -
-                info.n_cells_n) /
-               info.n_cells_hn;
+        if (info.n_cells_hn == 0)
+          return 1.0;
+
+        return std::max((t_hn / (t_n / (info.n_cells_n + info.n_cells_hn)) -
+                         info.n_cells_n) /
+                          info.n_cells_hn,
+                        1.0);
       };
 
       // DG (C)
@@ -95,6 +99,11 @@ run(const std::string  geometry_type,
  * mpirun -np 1 ./benchmark_01 annulus 8 8 1
  * mpirun -np 1 ./benchmark_01 quadrant 4 8 1
  * mpirun -np 1 ./benchmark_01 quadrant_flexible 4 8 1
+ *
+ *
+ * mpirun -np 40 ./benchmark_01 annulus 5 8 4
+ * mpirun -np 40 ./benchmark_01 quadrant 2 8 4
+ * mpirun -np 40 ./benchmark_01 quadrant_flexible 2 8 4
  */
 int
 main(int argc, char **argv)

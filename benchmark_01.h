@@ -29,7 +29,7 @@ namespace dealii::GridGenerator
 
     tria.refine_global(1);
 
-    for (unsigned int i = 1; i < n_refinements; i++)
+    for (unsigned int i = 1; i < n_refinements; ++i)
       {
         for (auto cell : tria.active_cell_iterators())
           if (cell->is_locally_owned())
@@ -89,7 +89,7 @@ namespace dealii::GridGenerator
     if (n_refinements == 0)
       return;
 
-    for (int i = 0; i < static_cast<int>(n_refinements) - 3; i++)
+    for (int i = 0; i < static_cast<int>(n_refinements) - 3; ++i)
       tria.refine_global();
 
     if (n_refinements >= 1)
@@ -241,8 +241,11 @@ public:
         for (unsigned int v = 0; v < n_vectorization_actual; ++v)
           {
             const auto mask =
-              matrix_free.get_dof_info()
-                .hanging_node_constraint_masks[cell * n_lanes + v];
+              matrix_free.get_dof_info().hanging_node_constraint_masks.size() ==
+                  0 ?
+                internal::MatrixFreeFunctions::ConstraintKinds::unconstrained :
+                matrix_free.get_dof_info()
+                  .hanging_node_constraint_masks[cell * n_lanes + v];
             constraint_mask[v] = mask;
 
             hn_available |=
