@@ -104,6 +104,19 @@ run(const std::string  geometry_type,
  * mpirun -np 40 ./benchmark_01 annulus 5 8 4
  * mpirun -np 40 ./benchmark_01 quadrant 2 8 4
  * mpirun -np 40 ./benchmark_01 quadrant_flexible 2 8 4
+ *
+ *
+for degree in 1 2 3 4
+do
+  mpirun -np  1 ./benchmark_01 annulus           5 8 $degree | tee results_annulus_{$degree}_1
+  mpirun -np 40 ./benchmark_01 annulus           5 8 $degree | tee results_annulus_{$degree}_40
+
+  mpirun -np  1 ./benchmark_01 quadrant          2 8 $degree | tee results_quadrant_{$degree}_1
+  mpirun -np 40 ./benchmark_01 quadrant          2 8 $degree | tee results_quadrant_{$degree}_40
+
+  mpirun -np  1 ./benchmark_01 quadrant_flexible 2 8 $degree | tee results_quadrant_flexible_{$degree}_1
+  mpirun -np 40 ./benchmark_01 quadrant_flexible 2 8 $degree | tee results_quadrant_flexible_{$degree}_40
+done
  */
 int
 main(int argc, char **argv)
