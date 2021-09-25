@@ -136,7 +136,13 @@ sort_and_count(const std::array<T, N> &input)
     }
 
   std::sort(result.begin(), result.end(), [](const auto &a, const auto &b) {
-    return a.second > b.second;
+    if (a.second > b.second)
+      return true;
+
+    if (a.second < b.second)
+      return false;
+
+    return a.first < b.first;
   });
 
   return result;
@@ -219,6 +225,9 @@ public:
     std::array<unsigned int, 512> hn_types;
     hn_types.fill(0);
 
+    std::array<unsigned int, VectorizedArrayType::size()> n_lanes_with_hn_same;
+    n_lanes_with_hn_same.fill(0);
+
     for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
       {
         std::array<internal::MatrixFreeFunctions::ConstraintKinds, n_lanes>
@@ -254,13 +263,31 @@ public:
 
             unsigned int n_lanes_with_hn_counter = 0;
 
+            std::map<std::uint16_t, unsigned int> n_lanes_with_hn_same_local;
+
+            for (unsigned int v = 0; v < n_vectorization_actual; ++v)
+              if (constraint_mask[v] !=
+                  internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
+                n_lanes_with_hn_same_local[static_cast<std::uint16_t>(
+                  constraint_mask[v])] = 0;
+
             for (unsigned int v = 0; v < n_vectorization_actual; ++v)
               if (constraint_mask[v] !=
                   internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
                 {
                   n_lanes_with_hn_counter++;
                   hn_types[static_cast<std::uint16_t>(constraint_mask[v])]++;
+                  n_lanes_with_hn_same_local[static_cast<std::uint16_t>(
+                    constraint_mask[v])]++;
                 }
+
+            n_lanes_with_hn_same[std::max_element(
+                                   n_lanes_with_hn_same_local.begin(),
+                                   n_lanes_with_hn_same_local.end(),
+                                   [](const auto &a, const auto &b) {
+                                     return a.second < b.second;
+                                   })
+                                   ->second]++;
 
             info.n_cells_hn += n_lanes_with_hn_counter;
             info.n_cells_n +=
@@ -285,6 +312,12 @@ public:
       {
         std::cout << "Number of lanes with hn constraints:" << std::endl;
         for (const auto i : sort_and_count(n_lanes_with_hn))
+          std::cout << "  " << i.first << " : " << i.second << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "Number of lanes with max same hn constraints:"
+                  << std::endl;
+        for (const auto i : sort_and_count(n_lanes_with_hn_same))
           std::cout << "  " << i.first << " : " << i.second << std::endl;
         std::cout << std::endl;
 
