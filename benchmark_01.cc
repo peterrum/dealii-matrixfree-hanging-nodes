@@ -29,7 +29,7 @@ main(int argc, char **argv)
     {
       Test<dim, degree_precompiled> test(geometry_type, n_refinements);
 
-      const auto info = test.get_info();
+      const auto info = test.get_info(true);
 
       table.add_value("n_levels", info.n_levels);
       table.add_value("degree", degree);

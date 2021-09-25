@@ -123,6 +123,26 @@ namespace dealii::GridGenerator
   }
 } // namespace dealii::GridGenerator
 
+template <class T, std::size_t N>
+std::array<std::pair<unsigned int, T>, N>
+sort_and_count(const std::array<T, N> &input)
+{
+  std::array<std::pair<unsigned int, T>, N> result;
+
+  for (unsigned int i = 0; i < N; ++i)
+    {
+      result[i].first  = i;
+      result[i].second = input[i];
+    }
+
+  std::sort(result.begin(), result.end(), [](const auto &a, const auto &b) {
+    return a.second > b.second;
+  });
+
+  return result;
+}
+
+
 template <int dim, int degree>
 class Test
 {
@@ -184,7 +204,7 @@ public:
   }
 
   Info
-  get_info()
+  get_info(const bool do_print)
   {
     Info info;
 
@@ -192,6 +212,12 @@ public:
     info.n_macro_cells = matrix_free.n_cell_batches();
 
     constexpr unsigned int n_lanes = VectorizedArrayType::size();
+
+    std::array<unsigned int, VectorizedArrayType::size()> n_lanes_with_hn;
+    n_lanes_with_hn.fill(0);
+
+    std::array<unsigned int, 512> hn_types;
+    hn_types.fill(0);
 
     for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
       {
@@ -226,12 +252,21 @@ public:
           {
             info.n_macro_cells_hn++;
 
+            unsigned int n_lanes_with_hn_counter = 0;
+
             for (unsigned int v = 0; v < n_vectorization_actual; ++v)
               if (constraint_mask[v] !=
                   internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
-                info.n_cells_hn++;
-              else
-                info.n_cells_n++;
+                {
+                  n_lanes_with_hn_counter++;
+                  hn_types[static_cast<std::uint16_t>(constraint_mask[v])]++;
+                }
+
+            info.n_cells_hn += n_lanes_with_hn_counter;
+            info.n_cells_n +=
+              (n_vectorization_actual - n_lanes_with_hn_counter);
+
+            n_lanes_with_hn[n_lanes_with_hn_counter]++;
           }
         else
           {
@@ -245,6 +280,38 @@ public:
     AssertThrow((info.n_macro_cells_n + info.n_macro_cells_hn ==
                  info.n_macro_cells),
                 ExcMessage("Number of macro cells do not match."));
+
+    if (do_print && Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+      {
+        std::cout << "Number of lanes with hn constraints:" << std::endl;
+        for (const auto i : sort_and_count(n_lanes_with_hn))
+          std::cout << "  " << i.first << " : " << i.second << std::endl;
+        std::cout << std::endl;
+
+        const auto to_string = [](std::uint16_t in) {
+          std::string result;
+
+          for (unsigned int i = 0; i < 9; ++i)
+            {
+              if ((in >> (8 - i)) & 1)
+                result += "1";
+              else
+                result += "0";
+
+              if ((i + 1) % 3 == 0)
+                result += " ";
+            }
+
+          return result;
+        };
+
+        std::cout << "Number of occurrences of ConstraintKinds:" << std::endl;
+        for (const auto i : sort_and_count(hn_types))
+          if (i.second > 0)
+            std::cout << "  " << to_string(i.first) << " : " << i.second
+                      << std::endl;
+        std::cout << std::endl;
+      }
 
     info.n_levels = tria.n_global_levels();
 
