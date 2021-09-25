@@ -136,12 +136,15 @@ public:
 
   struct Info
   {
-    unsigned int n_levels   = 0;
-    unsigned int n_cells    = 0;
-    unsigned int n_cells_n  = 0;
-    unsigned int n_cells_hn = 0;
-    unsigned int n_dofs_dg  = 0;
-    unsigned int n_dofs_cg  = 0;
+    unsigned int n_levels         = 0;
+    unsigned int n_cells          = 0;
+    unsigned int n_cells_n        = 0;
+    unsigned int n_cells_hn       = 0;
+    unsigned int n_macro_cells    = 0;
+    unsigned int n_macro_cells_n  = 0;
+    unsigned int n_macro_cells_hn = 0;
+    unsigned int n_dofs_dg        = 0;
+    unsigned int n_dofs_cg        = 0;
   };
 
 private:
@@ -185,9 +188,8 @@ public:
   {
     Info info;
 
-    info.n_cells = tria.n_cells();
-
-    unsigned int counter_mc = 0;
+    info.n_cells       = tria.n_active_cells();
+    info.n_macro_cells = matrix_free.n_cell_batches();
 
     constexpr unsigned int n_lanes = VectorizedArrayType::size();
 
@@ -218,17 +220,31 @@ public:
             for (unsigned int v = n_vectorization_actual; v < n_lanes; ++v)
               constraint_mask[v] =
                 internal::MatrixFreeFunctions::ConstraintKinds::unconstrained;
+          }
 
-            counter_mc++;
+        if (hn_available)
+          {
+            info.n_macro_cells_hn++;
 
-            for (unsigned int v = 0; v < n_lanes; ++v)
+            for (unsigned int v = 0; v < n_vectorization_actual; ++v)
               if (constraint_mask[v] !=
                   internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
                 info.n_cells_hn++;
+              else
+                info.n_cells_n++;
+          }
+        else
+          {
+            info.n_macro_cells_n++;
+            info.n_cells_n += n_vectorization_actual;
           }
       }
 
-    info.n_cells_n = info.n_cells - info.n_cells_hn;
+    AssertThrow((info.n_cells_n + info.n_cells_hn == info.n_cells),
+                ExcMessage("Number of cells do not match."));
+    AssertThrow((info.n_macro_cells_n + info.n_macro_cells_hn ==
+                 info.n_macro_cells),
+                ExcMessage("Number of macro cells do not match."));
 
     info.n_levels = tria.n_global_levels();
 

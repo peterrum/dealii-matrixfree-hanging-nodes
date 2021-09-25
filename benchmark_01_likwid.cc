@@ -1,5 +1,8 @@
 #include "benchmark_01.h"
 
+/**
+ * likwid-mpirun -np 1 -f -g MEM -m -O ./benchmark_01_likwid annulus 7 1 0 0 0
+ */
 int
 main(int argc, char **argv)
 {

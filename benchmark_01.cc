@@ -1,5 +1,10 @@
 #include "benchmark_01.h"
 
+/**
+ * mpirun -np 1 ./benchmark_01 annulus 8 8 1
+ * mpirun -np 1 ./benchmark_01 quadrant 4 8 1
+ * mpirun -np 1 ./benchmark_01 quadrant_flexible 4 8 1
+ */
 int
 main(int argc, char **argv)
 {
@@ -31,6 +36,9 @@ main(int argc, char **argv)
       table.add_value("n_cells", info.n_cells);
       table.add_value("n_cells_n", info.n_cells_n);
       table.add_value("n_cells_hn", info.n_cells_hn);
+      table.add_value("n_macro_cells", info.n_macro_cells);
+      table.add_value("n_macro_cells_n", info.n_macro_cells_n);
+      table.add_value("n_macro_cells_hn", info.n_macro_cells_hn);
 
       const auto compute_cost = [&](const auto t_n, const auto t_hn) {
         return (t_hn / (t_n / (info.n_cells_n + info.n_cells_hn)) -
