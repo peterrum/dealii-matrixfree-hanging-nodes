@@ -18,6 +18,7 @@ main(int argc, char **argv)
   const unsigned int min_n_refinements = argc > 2 ? atoi(argv[2]) : 6;
   const unsigned int max_n_refinements = argc > 3 ? atoi(argv[3]) : 6;
   const unsigned int degree            = argc > 4 ? atoi(argv[4]) : 1;
+  const bool         print_details     = true;
 
   AssertThrow(degree_precompiled == degree, ExcNotImplemented());
 
@@ -29,7 +30,7 @@ main(int argc, char **argv)
     {
       Test<dim, degree_precompiled> test(geometry_type, n_refinements);
 
-      const auto info = test.get_info(true);
+      const auto info = test.get_info(print_details);
 
       table.add_value("n_levels", info.n_levels);
       table.add_value("degree", degree);
@@ -79,10 +80,17 @@ main(int argc, char **argv)
       table.add_value("eta5", compute_cost(t4, t5));
       table.set_scientific("eta5", true);
 
-      if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+      if (print_details &&
+          Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
         {
           table.write_text(std::cout);
           std::cout << std::endl;
         }
+    }
+
+  if (print_details && Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+    {
+      table.write_text(std::cout);
+      std::cout << std::endl;
     }
 }
