@@ -420,6 +420,7 @@ main(int argc, char **argv)
       const auto info = test.get_info();
 
       table.add_value("n_levels", info.n_levels);
+      table.add_value("degree", degree);
       table.add_value("n_cells", info.n_cells);
       table.add_value("n_cells_n", info.n_cells_n);
       table.add_value("n_cells_hn", info.n_cells_hn);
