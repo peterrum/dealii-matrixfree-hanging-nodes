@@ -208,18 +208,26 @@ run(const std::string  geometry_type,
       const auto weight_function =
         parallel::hanging_nodes_weighting(helper, weight / 100.);
 
-      dealii::RepartitioningPolicyTools::CellWeightPolicy<dim> policy(
+      dealii::RepartitioningPolicyTools::CellWeightPolicy<dim> policy_0(
         weight_function);
 
-      parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-      tria_pft.create_triangulation(
+      parallel::fullydistributed::Triangulation<dim> tria_pft_0(comm);
+      tria_pft_0.create_triangulation(
         TriangulationDescription::Utilities::
           create_description_from_triangulation(tria_pdt,
-                                                policy.partition(tria_pdt)));
+                                                policy_0.partition(tria_pdt)));
 
       tria_pdt.signals.cell_weight.connect(weight_function);
 
       tria_pdt.repartition();
+
+      dealii::RepartitioningPolicyTools::DefaultPolicy<dim> policy_1;
+
+      parallel::fullydistributed::Triangulation<dim> tria_pft_1(comm);
+      tria_pft_1.create_triangulation(
+        TriangulationDescription::Utilities::
+          create_description_from_triangulation(tria_pdt,
+                                                policy_1.partition(tria_pdt)));
 
       const auto runner = [degree, &table](const auto &       tria,
                                            const std::string &label,
@@ -301,7 +309,8 @@ run(const std::string  geometry_type,
       };
 
       runner(tria_pdt, "pdt", true);
-      runner(tria_pft, "pft", false);
+      runner(tria_pft_0, "pft_0", false);
+      runner(tria_pft_1, "pft_1", false);
 
       if (print_details && Utilities::MPI::this_mpi_process(comm) == 0)
         {
