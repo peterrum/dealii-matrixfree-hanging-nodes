@@ -1,6 +1,11 @@
 #include <deal.II/base/convergence_table.h>
 
+#include <deal.II/distributed/fully_distributed_tria.h>
+#include <deal.II/distributed/repartitioning_policy_tools.h>
 #include <deal.II/distributed/tria.h>
+
+#include <deal.II/matrix_free/fe_evaluation.h>
+#include <deal.II/matrix_free/matrix_free.h>
 
 #include "benchmark.h"
 
@@ -132,6 +137,29 @@ private:
     line_to_cells;
 };
 
+namespace dealii::parallel
+{
+  template <int dim, int spacedim>
+  std::function<
+    unsigned int(const typename Triangulation<dim, spacedim>::cell_iterator &,
+                 const typename Triangulation<dim, spacedim>::CellStatus)>
+  hanging_nodes_weighting(const Helper<dim, spacedim> &helper,
+                          const double                 weight)
+  {
+    return [&helper, weight](const auto &cell, const auto &) -> unsigned int {
+      if (cell->is_locally_owned() == false)
+        return 10000;
+
+      if (helper.is_constrained(cell))
+        return 10000 * weight;
+      else
+        return 10000;
+    };
+  }
+
+
+} // namespace dealii::parallel
+
 template <unsigned int dim, unsigned int max_degree, unsigned int degree_ = 1>
 void
 run(const std::string  geometry_type,
@@ -150,9 +178,17 @@ run(const std::string  geometry_type,
 
   ConvergenceTable table;
 
-  for (unsigned int w = 100; w < 300; w += 10)
+  const MPI_Comm comm = MPI_COMM_WORLD;
+
+  using Number              = double;
+  using VectorizedArrayType = VectorizedArray<Number>;
+  using VectorType          = LinearAlgebra::distributed::Vector<Number>;
+
+  const unsigned n_repetitions = 100;
+
+  for (unsigned int weight = 100; weight <= 1000; weight += 10)
     {
-      parallel::distributed::Triangulation<dim> tria_pdt(MPI_COMM_WORLD);
+      parallel::distributed::Triangulation<dim> tria_pdt(comm);
 
       if (geometry_type == "annulus")
         GridGenerator::create_annulus(tria_pdt, n_refinements);
@@ -163,25 +199,118 @@ run(const std::string  geometry_type,
       else
         AssertThrow(false, ExcMessage("Unknown geometry type!"));
 
+      table.add_value("n_levels", tria_pdt.n_global_levels());
+      table.add_value("degree", degree);
+      table.add_value("weight", weight / 100.);
+
       const Helper<dim> helper(tria_pdt);
 
-      unsigned int counter = 0;
+      const auto weight_function =
+        parallel::hanging_nodes_weighting(helper, weight / 100.);
 
-      for (const auto &cell : tria_pdt.active_cell_iterators())
-        if (helper.is_constrained(cell))
-          counter++;
+      dealii::RepartitioningPolicyTools::CellWeightPolicy<dim> policy(
+        weight_function);
 
-      std::cout << counter << std::endl;
+      parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
+      tria_pft.create_triangulation(
+        TriangulationDescription::Utilities::
+          create_description_from_triangulation(tria_pdt,
+                                                policy.partition(tria_pdt)));
 
-      if (print_details &&
-          Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+      tria_pdt.signals.cell_weight.connect(weight_function);
+
+      tria_pdt.repartition();
+
+      const auto runner = [degree, &table](const auto &       tria,
+                                           const std::string &label,
+                                           const bool         print_details) {
+        const MappingQ1<dim> mapping;
+        const FE_Q<dim>      fe(degree);
+        const QGauss<dim>    quadrature(degree + 1);
+
+        DoFHandler<dim> dof_handler(tria);
+        dof_handler.distribute_dofs(fe);
+
+        AffineConstraints<Number> constraints;
+
+        typename MatrixFree<dim, Number, VectorizedArrayType>::AdditionalData
+          additional_data;
+        additional_data.mapping_update_flags = update_gradients;
+
+        MatrixFree<dim, Number, VectorizedArrayType> matrix_free;
+        matrix_free.reinit(
+          mapping, dof_handler, constraints, quadrature, additional_data);
+
+        VectorType src, dst;
+
+        matrix_free.initialize_dof_vector(src);
+        matrix_free.initialize_dof_vector(dst);
+
+        src = 1.0;
+
+        double min_time = 1e10;
+
+        for (unsigned int i = 0; i < n_repetitions; ++i)
+          {
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            std::chrono::time_point<std::chrono::system_clock> temp =
+              std::chrono::system_clock::now();
+
+            matrix_free.template cell_loop<VectorType, VectorType>(
+              [](const auto &matrix_free,
+                 auto &      dst,
+                 const auto &src,
+                 auto        range) {
+                FEEvaluation<dim, -1, 0, 1, Number> phi(matrix_free, range);
+
+                for (unsigned cell = range.first; cell < range.second; ++cell)
+                  {
+                    phi.reinit(cell);
+
+                    phi.gather_evaluate(src, EvaluationFlags::gradients);
+
+                    for (unsigned int q = 0; q < phi.n_q_points; ++q)
+                      phi.submit_gradient(phi.get_gradient(q), q);
+
+                    phi.integrate_scatter(EvaluationFlags::gradients, dst);
+                  }
+              },
+              dst,
+              src);
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            min_time = std::min<double>(
+              min_time,
+              std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::system_clock::now() - temp)
+                  .count() /
+                1e9);
+          }
+
+        min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
+
+        if (print_details)
+          {
+            table.add_value("n_dofs", src.size());
+          }
+
+        table.add_value(label + "_t", min_time);
+        table.set_scientific(label + "_t", true);
+      };
+
+      runner(tria_pdt, "pdt", true);
+      runner(tria_pft, "pft", false);
+
+      if (print_details && Utilities::MPI::this_mpi_process(comm) == 0)
         {
           table.write_text(std::cout);
           std::cout << std::endl;
         }
     }
 
-  if (print_details && Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+  if (print_details && Utilities::MPI::this_mpi_process(comm) == 0)
     {
       table.write_text(std::cout);
       std::cout << std::endl;
@@ -189,6 +318,8 @@ run(const std::string  geometry_type,
 }
 
 /**
+ * mpirun -np 40 ./benchmark_02 quadrant 7 4
+ * mpirun -np 40 ./benchmark_02 annulus 8 4
  */
 int
 main(int argc, char **argv)
