@@ -220,20 +220,20 @@ namespace internal
 
       const unsigned int points = given_degree + 1;
       
-      constexpr unsigned int p0 = 0;
-      constexpr unsigned int p1 = points - 1;
-      constexpr unsigned int p2 = points * points - points;
-      constexpr unsigned int p3 = points * points - 1;
-      constexpr unsigned int p4 =
+      const unsigned int p0 = 0;
+      const unsigned int p1 = points - 1;
+      const unsigned int p2 = points * points - points;
+      const unsigned int p3 = points * points - 1;
+      const unsigned int p4 =
         points * points * points - points * points;
-      constexpr unsigned int p5 =
+      const unsigned int p5 =
         points * points * points - points * points + points - 1;
-      constexpr unsigned int p6 = points * points * points - points;
+      const unsigned int p6 = points * points * points - points;
 
-      static constexpr std::array<unsigned int, 12> line_to_point = {
+      static const std::array<unsigned int, 12> line_to_point = {
         {p0, p1, p0, p2, p4, p5, p4, p6, p0, p1, p2, p3}};
 
-      static constexpr std::array<unsigned int, 6> face_to_point{
+      static const std::array<unsigned int, 6> face_to_point{
         {p0, p1, p0, p2, p0, p4}};
 
       for (unsigned int c = 0; c < n_desired_components; ++c)
@@ -324,80 +324,60 @@ namespace internal
                                                       values);
 
                   if (edges > 0)
-                  {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-                    static const void *s[8] = {
-                        &&s0, &&s1, &&s2, &&s3, &&s4, &&s5, &&s6, &&s7};
-
-                      goto *s[edges];
-#pragma GCC diagnostic pop
+                    switch (edges)
                       {
-                        s0:
-                          goto s8;
-                        s1:
+                        case 0:
+                          break;
+                        case 1:
                           helper.template process_edge<false, false, true>();
-                          goto s8;
-                        s2:
+                          break;
+                        case 2:
                           helper.template process_edge<true, false, false>();
-                          goto s8;
-                        s3:
+                          break;
+                        case 3:
                           helper.template process_edge<true, false, true>();
-                          goto s8;
-                        s4:
+                          break;
+                        case 4:
                           helper.template process_edge<false, true, false>();
-                          goto s8;
-                        s5:
+                          break;
+                        case 5:
                           helper.template process_edge<false, true, true>();
-                          goto s8;
-                        s6:
+                          break;
+                        case 6:
                           helper.template process_edge<true, true, false>();
-                          goto s8;
-                        s7:
+                          break;
+                        case 7:
                           helper.template process_edge<true, true, true>();
-                          goto s8;
+                          break;
                       }
-                    s8:
-                      (void)edges;
-                  }
 
                   if (faces > 0)
-                  {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-                    static const void *t[8] = {
-                        &&t0, &&t1, &&t2, &&t3, &&t4, &&t5, &&t6, &&t7};
-
-                      goto *t[faces];
-#pragma GCC diagnostic pop
+                    switch (faces)
                       {
-                        t0:
-                          goto t8;
-                        t1:
-                          helper.template process_faces<true, false, false>();
-                          goto t8;
-                        t2:
-                          helper.template process_faces<false, true, false>();
-                          goto t8;
-                        t3:
+                        case 0:
+                          break;
+                        case 1:
+                          helper.template process_faces_fast<true, false, false>();
+                          break;
+                        case 2:
+                          helper.template process_faces_fast<false, true, false>();
+                          break;
+                        case 3:
                           helper.template process_faces<true, true, false>();
-                          goto t8;
-                        t4:
-                          helper.template process_faces<false, false, true>();
-                          goto t8;
-                        t5:
+                          break;
+                        case 4:
+                          helper.template process_faces_fast<false, false, true>();
+                          break;
+                        case 5:
                           helper.template process_faces<true, false, true>();
-                          goto t8;
-                        t6:
+                          break;
+                        case 6:
                           helper.template process_faces<false, true, true>();
-                          goto t8;
-                        t7:
+                          break;
+                        case 7:
                           helper.template process_faces<true, true, true>();
-                          goto t8;
+                          break;
                       }
-                    t8:
-                      (void)faces;
-                  }
                 }
               else
                 {
@@ -474,107 +454,115 @@ namespace internal
 
       template <bool do_x, bool do_y, bool do_z>
       inline DEAL_II_ALWAYS_INLINE void
+      process_faces_fast() const
+      {
+        static_assert(
+          (do_x && ! do_y && !do_z) || (!do_x && do_y && !do_z) || (!do_x && !do_y && do_z),
+          "Only one face can be chosen.");
+
+        static const unsigned int direction = do_x ? 0 : (do_y ? 1 : 2);
+        const bool type = do_x ? type_x : (do_y ? type_y : type_z);
+
+        if(!do_x)
+          interpolate_3D_face<fe_degree, 0, direction, transpose, false>(
+            face_to_point[face[direction][type]], given_degree, v, interpolation_matrices[!type_x].data(), values);
+
+        if(!do_y)
+          interpolate_3D_face<fe_degree, 1, direction, transpose, false>(
+            face_to_point[face[direction][type]], given_degree, v, interpolation_matrices[!type_y].data(), values);
+
+        if(!do_z)
+          interpolate_3D_face<fe_degree, 2, direction, transpose, false>(
+            face_to_point[face[direction][type]], given_degree, v, interpolation_matrices[!type_z].data(), values);
+      }
+
+      template <bool do_x, bool do_y, bool do_z>
+      inline DEAL_II_ALWAYS_INLINE void
       process_faces() const
       {
+        static_assert(
+          ((do_x && ! do_y && !do_z) || (!do_x && do_y && !do_z) || (!do_x && !do_y && do_z)) == false,
+          "Only one face can be chosen.");
+        
         // clang-format off
           
-        // fast path: single face
-        if((do_x && ! do_y && !do_z) || (!do_x && do_y && !do_z) || (!do_x && !do_y && do_z))
-        {
-            static const unsigned int direction = do_x ? 0 : (do_y ? 1 : 2);
-            const bool type = do_x ? type_x : (do_y ? type_y : type_z);
+        // direction 0 -> faces
+        if(do_y && given_degree > 1)
+            interpolate_3D_face<fe_degree, 0, 1, transpose, true>(
+              face_to_point[face[1][type_y]], given_degree, v, interpolation_matrices[!type_x].data(), values);
 
-            if(!do_x)
-              interpolate_3D_face<fe_degree, 0, direction, transpose, false>(
-                face_to_point[face[direction][type]], given_degree, v, interpolation_matrices[!type_x].data(), values);
+        if(do_z && given_degree > 1)
+            interpolate_3D_face<fe_degree, 0, 2, transpose, true>(
+              face_to_point[face[2][type_z]], given_degree, v, interpolation_matrices[!type_x].data(), values);
 
-            if(!do_y)
-              interpolate_3D_face<fe_degree, 1, direction, transpose, false>(
-                face_to_point[face[direction][type]], given_degree, v, interpolation_matrices[!type_y].data(), values);
+        // direction 0 -> edges
+        interpolate_3D_edge<fe_degree, 0, transpose>(
+          (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][0]] : 
+         ((do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][0]] : 
+                                    line_to_point[lines[0][type_y][type_z][0]]) , given_degree, v, interpolation_matrices[!type_x].data(), values);
 
-            if(!do_z)
-              interpolate_3D_face<fe_degree, 2, direction, transpose, false>(
-                face_to_point[face[direction][type]], given_degree, v, interpolation_matrices[!type_z].data(), values);
-        }
-        else
-          {
-            // direction 0 -> faces
-            if(do_y && given_degree > 1)
-                interpolate_3D_face<fe_degree, 0, 1, transpose, true>(
-                  face_to_point[face[1][type_y]], given_degree, v, interpolation_matrices[!type_x].data(), values);
 
-            if(do_z && given_degree > 1)
-                interpolate_3D_face<fe_degree, 0, 2, transpose, true>(
-                  face_to_point[face[2][type_z]], given_degree, v, interpolation_matrices[!type_x].data(), values);
+        interpolate_3D_edge<fe_degree, 0, transpose>(
+          (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][1]] :
+         ((do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][1]] : 
+                                    line_to_point[lines[0][type_y][type_z][1]]), given_degree, v, interpolation_matrices[!type_x].data(), values);
 
-            // direction 0 -> edges
+        if(do_y && do_z)
             interpolate_3D_edge<fe_degree, 0, transpose>(
-              (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][0]] : 
-             ((do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][0]] : 
-                                        line_to_point[lines[0][type_y][type_z][0]]) , given_degree, v, interpolation_matrices[!type_x].data(), values);
+              line_to_point[lines[0][type_y][type_z][2]], given_degree, v, interpolation_matrices[!type_x].data(), values);
 
+        // direction 1 -> faces
+        if(do_x && given_degree > 1)
+            interpolate_3D_face<fe_degree, 1, 0, transpose, true>(
+              face_to_point[face[0][type_x]], given_degree, v, interpolation_matrices[!type_y].data(), values);
 
-            interpolate_3D_edge<fe_degree, 0, transpose>(
-              (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][1]] :
-             ((do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][1]] : 
-                                        line_to_point[lines[0][type_y][type_z][1]]), given_degree, v, interpolation_matrices[!type_x].data(), values);
+        if(do_z && given_degree > 1)
+            interpolate_3D_face<fe_degree, 1, 2, transpose, true>(
+              face_to_point[face[2][type_z]], given_degree, v, interpolation_matrices[!type_y].data(), values);
 
-            if(do_y && do_z)
-                interpolate_3D_edge<fe_degree, 0, transpose>(
-                  line_to_point[lines[0][type_y][type_z][2]], given_degree, v, interpolation_matrices[!type_x].data(), values);
+        // direction 1 -> lines
+        interpolate_3D_edge<fe_degree, 1, transpose>(
+          (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][2]] : 
+         ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][0]] :  
+                                    line_to_point[lines[1][type_x][type_z][0]]),
+                given_degree, v, interpolation_matrices[!type_y].data(), values);
 
-            // direction 1 -> faces
-            if(do_x && given_degree > 1)
-                interpolate_3D_face<fe_degree, 1, 0, transpose, true>(
-                  face_to_point[face[0][type_x]], given_degree, v, interpolation_matrices[!type_y].data(), values);
+        interpolate_3D_edge<fe_degree, 1, transpose>(
+          (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][3]] : 
+         ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][1]] :
+                                    line_to_point[lines[1][type_x][type_z][1]]),
+                given_degree, v, interpolation_matrices[!type_y].data(), values);
 
-            if(do_z && given_degree > 1)
-                interpolate_3D_face<fe_degree, 1, 2, transpose, true>(
-                  face_to_point[face[2][type_z]], given_degree, v, interpolation_matrices[!type_y].data(), values);
-
-            // direction 1 -> lines
+        if(do_x && do_z)
             interpolate_3D_edge<fe_degree, 1, transpose>(
-              (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][2]] : 
-             ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][0]] :  
-                                        line_to_point[lines[1][type_x][type_z][0]]),
-                    given_degree, v, interpolation_matrices[!type_y].data(), values);
+              line_to_point[lines[1][type_x][type_z][2]], given_degree, v, interpolation_matrices[!type_y].data(), values);
 
-            interpolate_3D_edge<fe_degree, 1, transpose>(
-              (do_x && do_y && !do_z) ? line_to_point[lines_plane[0][type_x][type_y][3]] : 
-             ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][1]] :
-                                        line_to_point[lines[1][type_x][type_z][1]]),
-                    given_degree, v, interpolation_matrices[!type_y].data(), values);
+        // direction 2 -> faces
+        if(do_x && given_degree > 1)
+            interpolate_3D_face<fe_degree, 2, 0, transpose, true>(
+              face_to_point[face[0][type_x]], given_degree, v, interpolation_matrices[!type_z].data(), values);
 
-            if(do_x && do_z)
-                interpolate_3D_edge<fe_degree, 1, transpose>(
-                  line_to_point[lines[1][type_x][type_z][2]], given_degree, v, interpolation_matrices[!type_y].data(), values);
+        if(do_y && given_degree > 1)
+            interpolate_3D_face<fe_degree, 2, 1, transpose, true>(
+              face_to_point[face[1][type_y]], given_degree, v, interpolation_matrices[!type_z].data(), values);
 
-            // direction 2 -> faces
-            if(do_x && given_degree > 1)
-                interpolate_3D_face<fe_degree, 2, 0, transpose, true>(
-                  face_to_point[face[0][type_x]], given_degree, v, interpolation_matrices[!type_z].data(), values);
+        // direction 2 -> edges
+        interpolate_3D_edge<fe_degree, 2, transpose>(
+          (do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][2]] : 
+         ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][2]] :
+                                    line_to_point[lines[2][type_x][type_y][0]]),
+            given_degree, v, interpolation_matrices[!type_z].data(), values);
 
-            if(do_y && given_degree > 1)
-                interpolate_3D_face<fe_degree, 2, 1, transpose, true>(
-                  face_to_point[face[1][type_y]], given_degree, v, interpolation_matrices[!type_z].data(), values);
+        interpolate_3D_edge<fe_degree, 2, transpose>(
+          (do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][3]] :
+         ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][3]] : 
+                                    line_to_point[lines[2][type_x][type_y][1]]), 
+            given_degree, v, interpolation_matrices[!type_z].data(), values);
 
-            // direction 2 -> edges
+        if(do_x && do_y)
             interpolate_3D_edge<fe_degree, 2, transpose>(
-              (do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][2]] : 
-             ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][2]] :
-                                        line_to_point[lines[2][type_x][type_y][0]]),
-                given_degree, v, interpolation_matrices[!type_z].data(), values);
-
-            interpolate_3D_edge<fe_degree, 2, transpose>(
-              (do_x && !do_y && do_z) ? line_to_point[lines_plane[1][type_x][type_z][3]] :
-             ((!do_x && do_y && do_z) ? line_to_point[lines_plane[2][type_y][type_z][3]] : 
-                                        line_to_point[lines[2][type_x][type_y][1]]), 
-                given_degree, v, interpolation_matrices[!type_z].data(), values);
-
-            if(do_x && do_y)
-                interpolate_3D_edge<fe_degree, 2, transpose>(
-                  line_to_point[lines[2][type_x][type_y][2]], given_degree, v, interpolation_matrices[!type_z].data(), values);
-          }
+              line_to_point[lines[2][type_x][type_y][2]], given_degree, v, interpolation_matrices[!type_z].data(), values);
+        
         // clang-format on
       }
 
