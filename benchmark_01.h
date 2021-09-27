@@ -1,6 +1,8 @@
 #include <deal.II/base/convergence_table.h>
 #include <deal.II/base/mpi.h>
 
+#include <deal.II/dofs/dof_tools.h>
+
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
@@ -64,19 +66,26 @@ public:
 
 private:
   const unsigned n_repetitions = 10;
+  const bool     setup_only_fast_algorithm;
   bool           do_cg;
   bool           do_apply_constraints;
   bool           do_apply_quadrature_kernel;
+  bool           use_fast_hanging_node_algorithm;
 
   Triangulation<dim>                           tria;
   DoFHandler<dim>                              dof_handler;
   MatrixFree<dim, Number, VectorizedArrayType> matrix_free;
+  MatrixFree<dim, Number, VectorizedArrayType> matrix_free_slow;
 
 public:
-  Test(const std::string geometry_type, const unsigned int n_refinements)
-    : do_cg(false)
+  Test(const std::string  geometry_type,
+       const unsigned int n_refinements,
+       const bool         setup_only_fast_algorithm)
+    : setup_only_fast_algorithm(setup_only_fast_algorithm)
+    , do_cg(false)
     , do_apply_constraints(false)
     , do_apply_quadrature_kernel(false)
+    , use_fast_hanging_node_algorithm(true)
     , dof_handler(tria)
   {
     if (geometry_type == "annulus")
@@ -95,7 +104,22 @@ public:
     dof_handler.distribute_dofs(fe);
 
     AffineConstraints<Number> constraints;
-    matrix_free.reinit(mapping, dof_handler, constraints, quadrature);
+
+    typename MatrixFree<dim, Number, VectorizedArrayType>::AdditionalData
+      additional_data;
+    additional_data.mapping_update_flags = update_gradients;
+
+    matrix_free.reinit(
+      mapping, dof_handler, constraints, quadrature, additional_data);
+
+    if (setup_only_fast_algorithm == false)
+      {
+        DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+
+        additional_data.use_fast_hanging_node_algorithm = false;
+        matrix_free_slow.reinit(
+          mapping, dof_handler, constraints, quadrature, additional_data);
+      }
   }
 
   Info
@@ -246,14 +270,24 @@ public:
   double
   run(const bool do_cg,
       const bool do_apply_constraints,
-      const bool do_apply_quadrature_kernel)
+      const bool do_apply_quadrature_kernel,
+      const bool use_fast_hanging_node_algorithm = true)
   {
     this->do_cg                      = do_cg;
     this->do_apply_constraints       = do_apply_constraints;
     this->do_apply_quadrature_kernel = do_apply_quadrature_kernel;
 
+    AssertThrow(use_fast_hanging_node_algorithm || !setup_only_fast_algorithm,
+                ExcMessage("Only fast algorithm has been set up!"));
+
+    this->use_fast_hanging_node_algorithm = use_fast_hanging_node_algorithm;
+
     VectorType0 src0, dst0;
     VectorType1 src1, dst1;
+
+    const auto &matrix_free = use_fast_hanging_node_algorithm ?
+                                this->matrix_free :
+                                this->matrix_free_slow;
 
     if (this->do_cg)
       {
@@ -318,6 +352,10 @@ private:
   void
   vmult(VectorType &dst, const VectorType &src)
   {
+    const auto &matrix_free = use_fast_hanging_node_algorithm ?
+                                this->matrix_free :
+                                this->matrix_free_slow;
+
     FEEval phi(matrix_free);
 
     // loop over all cells

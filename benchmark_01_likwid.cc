@@ -7,7 +7,8 @@ run(const std::string  geometry_type,
     const unsigned int degree,
     const bool         do_cg,
     const bool         do_apply_constraints,
-    const bool         do_apply_quadrature_kernel)
+    const bool         do_apply_quadrature_kernel,
+    const bool         setup_only_fast_algorithm)
 {
   if (degree != degree_)
     {
@@ -17,11 +18,14 @@ run(const std::string  geometry_type,
         degree,
         do_cg,
         do_apply_constraints,
-        do_apply_quadrature_kernel);
+        do_apply_quadrature_kernel,
+        setup_only_fast_algorithm);
       return;
     }
 
-  Test<dim, degree_> test(geometry_type, n_refinements);
+  Test<dim, degree_> test(geometry_type,
+                          n_refinements,
+                          setup_only_fast_algorithm);
   test.run(do_cg, do_apply_constraints, do_apply_quadrature_kernel);
 }
 
@@ -48,6 +52,7 @@ main(int argc, char **argv)
   const bool         do_cg                      = argc > 4 ? atoi(argv[4]) : 0;
   const bool         do_apply_constraints       = argc > 4 ? atoi(argv[4]) : 1;
   const bool         do_apply_quadrature_kernel = argc > 5 ? atoi(argv[5]) : 0;
+  const bool         setup_only_fast_algorithm  = true;
 
   AssertThrow(degree <= max_degree, ExcNotImplemented());
 
@@ -56,7 +61,8 @@ main(int argc, char **argv)
                        degree,
                        do_cg,
                        do_apply_constraints,
-                       do_apply_quadrature_kernel);
+                       do_apply_quadrature_kernel,
+                       setup_only_fast_algorithm);
 
 #ifdef LIKWID_PERFMON
   LIKWID_MARKER_CLOSE;

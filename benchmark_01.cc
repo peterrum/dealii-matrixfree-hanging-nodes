@@ -6,15 +6,18 @@ run(const std::string  geometry_type,
     const unsigned int min_n_refinements,
     const unsigned int max_n_refinements,
     const unsigned int degree,
+    const bool         setup_only_fast_algorithm,
     const bool         print_details)
 {
   if (degree != degree_)
     {
-      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(geometry_type,
-                                                              min_n_refinements,
-                                                              max_n_refinements,
-                                                              degree,
-                                                              print_details);
+      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(
+        geometry_type,
+        min_n_refinements,
+        max_n_refinements,
+        degree,
+        setup_only_fast_algorithm,
+        print_details);
       return;
     }
 
@@ -24,7 +27,9 @@ run(const std::string  geometry_type,
        n_refinements <= max_n_refinements;
        ++n_refinements)
     {
-      Test<dim, max_degree> test(geometry_type, n_refinements);
+      Test<dim, degree_> test(geometry_type,
+                              n_refinements,
+                              setup_only_fast_algorithm);
 
       const auto info = test.get_info(print_details);
 
@@ -80,6 +85,20 @@ run(const std::string  geometry_type,
       table.add_value("eta5", compute_cost(t4, t5));
       table.set_scientific("eta5", true);
 
+      // CG (SC) with old algorithm
+      if (setup_only_fast_algorithm == false)
+        {
+          const auto t6 = test.run(true, false, true, false);
+          const auto t7 = test.run(true, true, true, false);
+
+          table.add_value("t6", t6);
+          table.set_scientific("t6", true);
+          table.add_value("t7", t7);
+          table.set_scientific("t7", true);
+          table.add_value("eta7", compute_cost(t4, t7));
+          table.set_scientific("eta7", true);
+        }
+
       if (print_details &&
           Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
         {
@@ -128,13 +147,18 @@ main(int argc, char **argv)
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
-  const unsigned int min_n_refinements = argc > 2 ? atoi(argv[2]) : 6;
-  const unsigned int max_n_refinements = argc > 3 ? atoi(argv[3]) : 6;
-  const unsigned int degree            = argc > 4 ? atoi(argv[4]) : 1;
-  const bool         print_details     = true;
+  const unsigned int min_n_refinements         = argc > 2 ? atoi(argv[2]) : 6;
+  const unsigned int max_n_refinements         = argc > 3 ? atoi(argv[3]) : 6;
+  const unsigned int degree                    = argc > 4 ? atoi(argv[4]) : 1;
+  const bool         setup_only_fast_algorithm = true;
+  const bool         print_details             = true;
 
   AssertThrow(degree <= max_degree, ExcNotImplemented());
 
-  run<dim, max_degree>(
-    geometry_type, min_n_refinements, max_n_refinements, degree, print_details);
+  run<dim, max_degree>(geometry_type,
+                       min_n_refinements,
+                       max_n_refinements,
+                       degree,
+                       setup_only_fast_algorithm,
+                       print_details);
 }
