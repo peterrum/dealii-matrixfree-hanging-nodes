@@ -4,6 +4,8 @@
 #include <deal.II/distributed/repartitioning_policy_tools.h>
 #include <deal.II/distributed/tria.h>
 
+#include <deal.II/dofs/dof_tools.h>
+
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
@@ -165,14 +167,21 @@ void
 run(const std::string  geometry_type,
     const unsigned int n_refinements,
     const unsigned int degree,
-    const bool         print_details)
+    const bool         print_details,
+    const bool         perform_communication           = true,
+    const bool         use_fast_hanging_node_algorithm = true,
+    const bool         use_shared_memory               = false)
 {
   if (degree != degree_)
     {
-      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(geometry_type,
-                                                              n_refinements,
-                                                              degree,
-                                                              print_details);
+      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(
+        geometry_type,
+        n_refinements,
+        degree,
+        print_details,
+        perform_communication,
+        use_fast_hanging_node_algorithm,
+        use_shared_memory);
       return;
     }
 
@@ -229,9 +238,13 @@ run(const std::string  geometry_type,
           create_description_from_triangulation(tria_pdt,
                                                 policy_1.partition(tria_pdt)));
 
-      const auto runner = [degree, &table](const auto &       tria,
-                                           const std::string &label,
-                                           const bool         print_details) {
+      const auto runner = [degree,
+                           use_fast_hanging_node_algorithm,
+                           perform_communication,
+                           use_shared_memory,
+                           &table](const auto &       tria,
+                                   const std::string &label,
+                                   const bool         print_details) {
         const MappingQ1<dim> mapping;
         const FE_Q<dim>      fe(degree);
         const QGauss<dim>    quadrature(degree + 1);
@@ -245,8 +258,14 @@ run(const std::string  geometry_type,
           additional_data;
         additional_data.mapping_update_flags = update_gradients;
 
-        if (false)
-          additional_data.use_fast_hanging_node_algorithm = false;
+        if (use_fast_hanging_node_algorithm == false)
+          {
+            DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+            additional_data.use_fast_hanging_node_algorithm = false;
+          }
+
+        if (use_shared_memory)
+          additional_data.communicator_sm = MPI_COMM_WORLD;
 
         MatrixFree<dim, Number, VectorizedArrayType> matrix_free;
         matrix_free.reinit(
@@ -268,10 +287,10 @@ run(const std::string  geometry_type,
             std::chrono::time_point<std::chrono::system_clock> temp =
               std::chrono::system_clock::now();
 
-            const auto fu = [](const auto &matrix_free,
-                               auto &      dst,
-                               const auto &src,
-                               auto        range) {
+            const auto fu = [perform_communication](const auto &matrix_free,
+                                                    auto &      dst,
+                                                    const auto &src,
+                                                    auto        range) {
               FEEvaluation<dim, -1, 0, 1, Number> phi(matrix_free, range);
 
               for (unsigned cell = range.first; cell < range.second; ++cell)
@@ -287,7 +306,7 @@ run(const std::string  geometry_type,
                 }
             };
 
-            if (true)
+            if (perform_communication)
               matrix_free.template cell_loop<VectorType, VectorType>(fu,
                                                                      dst,
                                                                      src);
