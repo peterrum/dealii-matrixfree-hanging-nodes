@@ -162,7 +162,7 @@ namespace dealii::parallel
 
 } // namespace dealii::parallel
 
-template <unsigned int dim, unsigned int max_degree, unsigned int degree_ = 1>
+template <unsigned int dim>
 void
 run(const std::string  geometry_type,
     const unsigned int n_refinements,
@@ -172,19 +172,6 @@ run(const std::string  geometry_type,
     const bool         use_fast_hanging_node_algorithm = true,
     const bool         use_shared_memory               = false)
 {
-  if (degree != degree_)
-    {
-      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(
-        geometry_type,
-        n_refinements,
-        degree,
-        print_details,
-        perform_communication,
-        use_fast_hanging_node_algorithm,
-        use_shared_memory);
-      return;
-    }
-
   ConvergenceTable table;
 
   const MPI_Comm comm = MPI_COMM_WORLD;
@@ -365,8 +352,7 @@ main(int argc, char **argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
-  const unsigned int dim        = 3;
-  const unsigned int max_degree = 4;
+  const unsigned int dim = 3;
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
@@ -374,7 +360,5 @@ main(int argc, char **argv)
   const unsigned int degree        = argc > 3 ? atoi(argv[3]) : 1;
   const bool         print_details = true;
 
-  AssertThrow(degree <= max_degree, ExcNotImplemented());
-
-  run<dim, max_degree>(geometry_type, n_refinements, degree, print_details);
+  run<dim>(geometry_type, n_refinements, degree, print_details);
 }
