@@ -1,6 +1,6 @@
 #include "benchmark_01.h"
 
-template <unsigned int dim, unsigned int max_degree, unsigned int degree_ = 1>
+template <unsigned int dim>
 void
 run(const std::string  geometry_type,
     const unsigned int n_refinements,
@@ -10,22 +10,10 @@ run(const std::string  geometry_type,
     const bool         do_apply_quadrature_kernel,
     const bool         setup_only_fast_algorithm)
 {
-  if (degree != degree_)
-    {
-      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(
-        geometry_type,
-        n_refinements,
-        degree,
-        do_cg,
-        do_apply_constraints,
-        do_apply_quadrature_kernel,
-        setup_only_fast_algorithm);
-      return;
-    }
-
-  Test<dim, degree_> test(geometry_type,
-                          n_refinements,
-                          setup_only_fast_algorithm);
+  Test<dim> test(degree,
+                 geometry_type,
+                 n_refinements,
+                 setup_only_fast_algorithm);
   test.run(do_cg, do_apply_constraints, do_apply_quadrature_kernel);
 }
 
@@ -42,8 +30,7 @@ main(int argc, char **argv)
   LIKWID_MARKER_THREADINIT;
 #endif
 
-  const unsigned int dim        = 3;
-  const unsigned int max_degree = 4;
+  const unsigned int dim = 3;
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
@@ -54,15 +41,13 @@ main(int argc, char **argv)
   const bool         do_apply_quadrature_kernel = argc > 5 ? atoi(argv[5]) : 0;
   const bool         setup_only_fast_algorithm  = true;
 
-  AssertThrow(degree <= max_degree, ExcNotImplemented());
-
-  run<dim, max_degree>(geometry_type,
-                       n_refinements,
-                       degree,
-                       do_cg,
-                       do_apply_constraints,
-                       do_apply_quadrature_kernel,
-                       setup_only_fast_algorithm);
+  run<dim>(geometry_type,
+           n_refinements,
+           degree,
+           do_cg,
+           do_apply_constraints,
+           do_apply_quadrature_kernel,
+           setup_only_fast_algorithm);
 
 #ifdef LIKWID_PERFMON
   LIKWID_MARKER_CLOSE;

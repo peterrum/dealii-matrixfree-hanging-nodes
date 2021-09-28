@@ -40,7 +40,7 @@ sort_and_count(const std::array<T, N> &input)
 }
 
 
-template <int dim, int degree>
+template <int dim>
 class Test
 {
 public:
@@ -48,8 +48,7 @@ public:
   using VectorizedArrayType = VectorizedArray<Number>;
   using VectorType0         = Vector<Number>;
   using VectorType1         = AlignedVector<VectorizedArrayType>;
-  using FEEval =
-    FEEvaluation<dim, degree, degree + 1, 1, Number, VectorizedArrayType>;
+  using FEEval = FEEvaluation<dim, -1, 0, 1, Number, VectorizedArrayType>;
 
   struct Info
   {
@@ -65,12 +64,13 @@ public:
   };
 
 private:
-  const unsigned n_repetitions = 10;
-  const bool     setup_only_fast_algorithm;
-  bool           do_cg;
-  bool           do_apply_constraints;
-  bool           do_apply_quadrature_kernel;
-  bool           use_fast_hanging_node_algorithm;
+  const unsigned int n_repetitions = 10;
+  const unsigned int degree;
+  const bool         setup_only_fast_algorithm;
+  bool               do_cg;
+  bool               do_apply_constraints;
+  bool               do_apply_quadrature_kernel;
+  bool               use_fast_hanging_node_algorithm;
 
   Triangulation<dim>                           tria;
   DoFHandler<dim>                              dof_handler;
@@ -78,10 +78,12 @@ private:
   MatrixFree<dim, Number, VectorizedArrayType> matrix_free_slow;
 
 public:
-  Test(const std::string  geometry_type,
+  Test(const unsigned int degree,
+       const std::string  geometry_type,
        const unsigned int n_refinements,
        const bool         setup_only_fast_algorithm)
-    : setup_only_fast_algorithm(setup_only_fast_algorithm)
+    : degree(degree)
+    , setup_only_fast_algorithm(setup_only_fast_algorithm)
     , do_cg(false)
     , do_apply_constraints(false)
     , do_apply_quadrature_kernel(false)

@@ -1,6 +1,6 @@
 #include "benchmark_01.h"
 
-template <unsigned int dim, unsigned int max_degree, unsigned int degree_ = 1>
+template <unsigned int dim>
 void
 run(const std::string  geometry_type,
     const unsigned int min_n_refinements,
@@ -9,27 +9,16 @@ run(const std::string  geometry_type,
     const bool         setup_only_fast_algorithm,
     const bool         print_details)
 {
-  if (degree != degree_)
-    {
-      run<dim, max_degree, std::min(max_degree, degree_ + 1)>(
-        geometry_type,
-        min_n_refinements,
-        max_n_refinements,
-        degree,
-        setup_only_fast_algorithm,
-        print_details);
-      return;
-    }
-
   ConvergenceTable table;
 
   for (unsigned int n_refinements = min_n_refinements;
        n_refinements <= max_n_refinements;
        ++n_refinements)
     {
-      Test<dim, degree_> test(geometry_type,
-                              n_refinements,
-                              setup_only_fast_algorithm);
+      Test<dim> test(degree,
+                     geometry_type,
+                     n_refinements,
+                     setup_only_fast_algorithm);
 
       const auto info = test.get_info(print_details);
 
@@ -142,8 +131,7 @@ main(int argc, char **argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
-  const unsigned int dim        = 3;
-  const unsigned int max_degree = 4;
+  const unsigned int dim = 3;
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
@@ -153,12 +141,10 @@ main(int argc, char **argv)
   const bool         setup_only_fast_algorithm = true;
   const bool         print_details             = true;
 
-  AssertThrow(degree <= max_degree, ExcNotImplemented());
-
-  run<dim, max_degree>(geometry_type,
-                       min_n_refinements,
-                       max_n_refinements,
-                       degree,
-                       setup_only_fast_algorithm,
-                       print_details);
+  run<dim>(geometry_type,
+           min_n_refinements,
+           max_n_refinements,
+           degree,
+           setup_only_fast_algorithm,
+           print_details);
 }
