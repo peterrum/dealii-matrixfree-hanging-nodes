@@ -245,6 +245,9 @@ run(const std::string  geometry_type,
           additional_data;
         additional_data.mapping_update_flags = update_gradients;
 
+        if (false)
+          additional_data.use_fast_hanging_node_algorithm = false;
+
         MatrixFree<dim, Number, VectorizedArrayType> matrix_free;
         matrix_free.reinit(
           mapping, dof_handler, constraints, quadrature, additional_data);
@@ -265,27 +268,35 @@ run(const std::string  geometry_type,
             std::chrono::time_point<std::chrono::system_clock> temp =
               std::chrono::system_clock::now();
 
-            matrix_free.template cell_loop<VectorType, VectorType>(
-              [](const auto &matrix_free,
-                 auto &      dst,
-                 const auto &src,
-                 auto        range) {
-                FEEvaluation<dim, -1, 0, 1, Number> phi(matrix_free, range);
+            const auto fu = [](const auto &matrix_free,
+                               auto &      dst,
+                               const auto &src,
+                               auto        range) {
+              FEEvaluation<dim, -1, 0, 1, Number> phi(matrix_free, range);
 
-                for (unsigned cell = range.first; cell < range.second; ++cell)
-                  {
-                    phi.reinit(cell);
+              for (unsigned cell = range.first; cell < range.second; ++cell)
+                {
+                  phi.reinit(cell);
 
-                    phi.gather_evaluate(src, EvaluationFlags::gradients);
+                  phi.gather_evaluate(src, EvaluationFlags::gradients);
 
-                    for (unsigned int q = 0; q < phi.n_q_points; ++q)
-                      phi.submit_gradient(phi.get_gradient(q), q);
+                  for (unsigned int q = 0; q < phi.n_q_points; ++q)
+                    phi.submit_gradient(phi.get_gradient(q), q);
 
-                    phi.integrate_scatter(EvaluationFlags::gradients, dst);
-                  }
-              },
-              dst,
-              src);
+                  phi.integrate_scatter(EvaluationFlags::gradients, dst);
+                }
+            };
+
+            if (true)
+              matrix_free.template cell_loop<VectorType, VectorType>(fu,
+                                                                     dst,
+                                                                     src);
+            else
+              fu(matrix_free,
+                 dst,
+                 src,
+                 std::pair<unsigned int, unsigned int>{
+                   0, matrix_free.n_cell_batches()});
 
             MPI_Barrier(MPI_COMM_WORLD);
 
