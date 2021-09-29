@@ -233,9 +233,11 @@ run(const std::string  geometry_type,
                            use_fast_hanging_node_algorithm,
                            perform_communication,
                            use_shared_memory,
-                           &table](const auto &       tria,
-                                   const std::string &label,
-                                   const bool         print_details) {
+                           weight,
+                           &table,
+                           &comm](const auto &       tria,
+                                  const std::string &label,
+                                  const bool         print_details) {
         const MappingQ1<dim> mapping;
         const FE_Q<dim>      fe(degree);
         const QGauss<dim>    quadrature(degree + 1);
@@ -269,7 +271,62 @@ run(const std::string  geometry_type,
 
         src = 1.0;
 
+        const auto print_stat = [&](const auto value, std::string post_Label) {
+          const auto min_max_avg_comm =
+            Utilities::MPI::min_max_avg(static_cast<double>(value),
+                                        MPI_COMM_WORLD);
+
+          const auto result = Utilities::MPI::gather(MPI_COMM_WORLD, value);
+
+          if (Utilities::MPI::this_mpi_process(comm) == 0)
+            {
+              std::ofstream myfile;
+              myfile.open(label + "_" + post_Label + ".csv",
+                          (weight == 100) ? (std::ios::out) :
+                                            (std::ios::out | std::ios::app));
+
+              myfile << std::to_string(weight) << " ";
+              myfile << std::to_string(min_max_avg_comm.min) << " ";
+              myfile << std::to_string(min_max_avg_comm.max) << " ";
+              myfile << std::to_string(min_max_avg_comm.avg) << " ";
+
+              for (const auto &i : result)
+                myfile << std::to_string(i) << " ";
+
+              myfile << std::endl;
+              ;
+              myfile.close();
+            }
+        };
+
+        print_stat(src.get_partitioner()->n_ghost_indices(), "ghost");
+        print_stat(src.get_partitioner()->n_import_indices(), "import");
+
         double min_time = 1e10;
+
+        const auto fu = [perform_communication](const auto &matrix_free,
+                                                auto &      dst,
+                                                const auto &src,
+                                                auto        range) {
+          FEEvaluation<dim,
+                       fe_degree_precomiled,
+                       fe_degree_precomiled + 1,
+                       1,
+                       Number>
+            phi(matrix_free, range);
+
+          for (unsigned cell = range.first; cell < range.second; ++cell)
+            {
+              phi.reinit(cell);
+
+              phi.gather_evaluate(src, EvaluationFlags::gradients);
+
+              for (unsigned int q = 0; q < phi.n_q_points; ++q)
+                phi.submit_gradient(phi.get_gradient(q), q);
+
+              phi.integrate_scatter(EvaluationFlags::gradients, dst);
+            }
+        };
 
         for (unsigned int i = 0; i < n_repetitions; ++i)
           {
@@ -277,30 +334,6 @@ run(const std::string  geometry_type,
 
             std::chrono::time_point<std::chrono::system_clock> temp =
               std::chrono::system_clock::now();
-
-            const auto fu = [perform_communication](const auto &matrix_free,
-                                                    auto &      dst,
-                                                    const auto &src,
-                                                    auto        range) {
-              FEEvaluation<dim,
-                           fe_degree_precomiled,
-                           fe_degree_precomiled + 1,
-                           1,
-                           Number>
-                phi(matrix_free, range);
-
-              for (unsigned cell = range.first; cell < range.second; ++cell)
-                {
-                  phi.reinit(cell);
-
-                  phi.gather_evaluate(src, EvaluationFlags::gradients);
-
-                  for (unsigned int q = 0; q < phi.n_q_points; ++q)
-                    phi.submit_gradient(phi.get_gradient(q), q);
-
-                  phi.integrate_scatter(EvaluationFlags::gradients, dst);
-                }
-            };
 
             if (perform_communication)
               matrix_free.template cell_loop<VectorType, VectorType>(fu,
