@@ -40,7 +40,7 @@ sort_and_count(const std::array<T, N> &input)
 }
 
 
-template <int dim>
+template <int dim, int fe_degree_precomiled>
 class Test
 {
 public:
@@ -48,7 +48,12 @@ public:
   using VectorizedArrayType = VectorizedArray<Number>;
   using VectorType0         = Vector<Number>;
   using VectorType1         = AlignedVector<VectorizedArrayType>;
-  using FEEval = FEEvaluation<dim, -1, 0, 1, Number, VectorizedArrayType>;
+  using FEEval              = FEEvaluation<dim,
+                              fe_degree_precomiled,
+                              fe_degree_precomiled + 1,
+                              1,
+                              Number,
+                              VectorizedArrayType>;
 
   struct Info
   {
@@ -90,6 +95,10 @@ public:
     , use_fast_hanging_node_algorithm(true)
     , dof_handler(tria)
   {
+    AssertThrow(fe_degree_precomiled == -1 ||
+                  static_cast<unsigned int>(fe_degree_precomiled) == degree,
+                ExcMessage("Degrees do not match!"));
+
     if (geometry_type == "annulus")
       GridGenerator::create_annulus(tria, n_refinements);
     else if (geometry_type == "quadrant")

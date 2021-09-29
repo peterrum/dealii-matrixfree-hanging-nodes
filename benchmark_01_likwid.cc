@@ -1,6 +1,6 @@
 #include "benchmark_01.h"
 
-template <unsigned int dim>
+template <unsigned int dim, int fe_degree_precomiled>
 void
 run(const std::string  geometry_type,
     const unsigned int n_refinements,
@@ -10,10 +10,10 @@ run(const std::string  geometry_type,
     const bool         do_apply_quadrature_kernel,
     const bool         setup_only_fast_algorithm)
 {
-  Test<dim> test(degree,
-                 geometry_type,
-                 n_refinements,
-                 setup_only_fast_algorithm);
+  Test<dim, fe_degree_precomiled> test(degree,
+                                       geometry_type,
+                                       n_refinements,
+                                       setup_only_fast_algorithm);
   test.run(do_cg, do_apply_constraints, do_apply_quadrature_kernel);
 }
 
@@ -30,7 +30,8 @@ main(int argc, char **argv)
   LIKWID_MARKER_THREADINIT;
 #endif
 
-  const unsigned int dim = 3;
+  const unsigned int dim                  = 3;
+  const int          fe_degree_precomiled = -1;
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
@@ -41,13 +42,13 @@ main(int argc, char **argv)
   const bool         do_apply_quadrature_kernel = argc > 5 ? atoi(argv[5]) : 0;
   const bool         setup_only_fast_algorithm  = true;
 
-  run<dim>(geometry_type,
-           n_refinements,
-           degree,
-           do_cg,
-           do_apply_constraints,
-           do_apply_quadrature_kernel,
-           setup_only_fast_algorithm);
+  run<dim, fe_degree_precomiled>(geometry_type,
+                                 n_refinements,
+                                 degree,
+                                 do_cg,
+                                 do_apply_constraints,
+                                 do_apply_quadrature_kernel,
+                                 setup_only_fast_algorithm);
 
 #ifdef LIKWID_PERFMON
   LIKWID_MARKER_CLOSE;

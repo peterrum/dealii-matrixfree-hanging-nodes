@@ -162,7 +162,7 @@ namespace dealii::parallel
 
 } // namespace dealii::parallel
 
-template <unsigned int dim>
+template <unsigned int dim, const int fe_degree_precomiled>
 void
 run(const std::string  geometry_type,
     const unsigned int n_refinements,
@@ -172,6 +172,10 @@ run(const std::string  geometry_type,
     const bool         use_fast_hanging_node_algorithm = true,
     const bool         use_shared_memory               = false)
 {
+  AssertThrow(fe_degree_precomiled == -1 ||
+                static_cast<unsigned int>(fe_degree_precomiled) == degree,
+              ExcMessage("Degrees do not match!"));
+
   ConvergenceTable table;
 
   const MPI_Comm comm = MPI_COMM_WORLD;
@@ -278,7 +282,12 @@ run(const std::string  geometry_type,
                                                     auto &      dst,
                                                     const auto &src,
                                                     auto        range) {
-              FEEvaluation<dim, -1, 0, 1, Number> phi(matrix_free, range);
+              FEEvaluation<dim,
+                           fe_degree_precomiled,
+                           fe_degree_precomiled + 1,
+                           1,
+                           Number>
+                phi(matrix_free, range);
 
               for (unsigned cell = range.first; cell < range.second; ++cell)
                 {
@@ -352,7 +361,8 @@ main(int argc, char **argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
-  const unsigned int dim = 3;
+  const unsigned int dim                  = 3;
+  const int          fe_degree_precomiled = -1;
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
@@ -360,5 +370,8 @@ main(int argc, char **argv)
   const unsigned int degree        = argc > 3 ? atoi(argv[3]) : 1;
   const bool         print_details = true;
 
-  run<dim>(geometry_type, n_refinements, degree, print_details);
+  run<dim, fe_degree_precomiled>(geometry_type,
+                                 n_refinements,
+                                 degree,
+                                 print_details);
 }

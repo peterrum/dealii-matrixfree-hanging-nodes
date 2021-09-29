@@ -1,6 +1,6 @@
 #include "benchmark_01.h"
 
-template <unsigned int dim>
+template <unsigned int dim, int fe_degree_precomiled>
 void
 run(const std::string  geometry_type,
     const unsigned int min_n_refinements,
@@ -15,10 +15,10 @@ run(const std::string  geometry_type,
        n_refinements <= max_n_refinements;
        ++n_refinements)
     {
-      Test<dim> test(degree,
-                     geometry_type,
-                     n_refinements,
-                     setup_only_fast_algorithm);
+      Test<dim, fe_degree_precomiled> test(degree,
+                                           geometry_type,
+                                           n_refinements,
+                                           setup_only_fast_algorithm);
 
       const auto info = test.get_info(print_details);
 
@@ -131,7 +131,8 @@ main(int argc, char **argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
-  const unsigned int dim = 3;
+  const unsigned int dim                  = 3;
+  const int          fe_degree_precomiled = -1;
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
@@ -141,10 +142,10 @@ main(int argc, char **argv)
   const bool         setup_only_fast_algorithm = true;
   const bool         print_details             = true;
 
-  run<dim>(geometry_type,
-           min_n_refinements,
-           max_n_refinements,
-           degree,
-           setup_only_fast_algorithm,
-           print_details);
+  run<dim, fe_degree_precomiled>(geometry_type,
+                                 min_n_refinements,
+                                 max_n_refinements,
+                                 degree,
+                                 setup_only_fast_algorithm,
+                                 print_details);
 }
