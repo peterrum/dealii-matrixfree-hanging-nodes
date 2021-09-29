@@ -40,6 +40,81 @@ sort_and_count(const std::array<T, N> &input)
 }
 
 
+
+template <int dim,
+          int fe_degree,
+          int n_q_points_1d,
+          int n_components_,
+          typename Number,
+          typename VectorizedArrayType>
+class FEEvaluationOwn : public FEEvaluation<dim,
+                                            fe_degree,
+                                            n_q_points_1d,
+                                            n_components_,
+                                            Number,
+                                            VectorizedArrayType>
+{
+public:
+  FEEvaluationOwn(
+    const MatrixFree<dim, Number, VectorizedArrayType> &matrix_free,
+    const unsigned int                                  dof_no  = 0,
+    const unsigned int                                  quad_no = 0,
+    const unsigned int first_selected_component                 = 0,
+    const unsigned int active_fe_index   = numbers::invalid_unsigned_int,
+    const unsigned int active_quad_index = numbers::invalid_unsigned_int)
+    : FEEvaluation<dim,
+                   fe_degree,
+                   n_q_points_1d,
+                   n_components_,
+                   Number,
+                   VectorizedArrayType>(matrix_free,
+                                        dof_no,
+                                        quad_no,
+                                        first_selected_component,
+                                        active_fe_index,
+                                        active_quad_index)
+  {}
+
+  template <typename VectorType>
+  inline void
+  distribute_local_to_global_plain(
+    VectorType &                                    dst,
+    const unsigned int                              first_index = 0,
+    const std::bitset<VectorizedArrayType::size()> &mask =
+      std::bitset<VectorizedArrayType::size()>().flip()) const
+  {
+#ifdef DEBUG
+    Assert(dof_values_initialized == true,
+           internal::ExcAccessToUninitializedField());
+#endif
+
+    const auto dst_data = internal::get_vector_data<n_components_>(
+      dst,
+      first_index,
+      this->dof_access_index ==
+        internal::MatrixFreeFunctions::DoFInfo::dof_access_cell,
+      this->active_fe_index,
+      this->dof_info);
+
+    internal::VectorDistributorLocalToGlobal<Number, VectorizedArrayType>
+      distributor;
+    this->read_write_operation(distributor,
+                               dst_data.first,
+                               dst_data.second,
+                               mask);
+  }
+
+  template <bool transpose>
+  void
+  apply_hanging_node_constraints()
+  {
+    FEEvaluationBase<dim, n_components_, Number, false, VectorizedArrayType>::
+      template apply_hanging_node_constraints<transpose>();
+  }
+};
+
+
+
 template <int dim, int fe_degree_precomiled>
 class Test
 {
@@ -48,12 +123,12 @@ public:
   using VectorizedArrayType = VectorizedArray<Number>;
   using VectorType0         = Vector<Number>;
   using VectorType1         = AlignedVector<VectorizedArrayType>;
-  using FEEval              = FEEvaluation<dim,
-                              fe_degree_precomiled,
-                              fe_degree_precomiled + 1,
-                              1,
-                              Number,
-                              VectorizedArrayType>;
+  using FEEval              = FEEvaluationOwn<dim,
+                                 fe_degree_precomiled,
+                                 fe_degree_precomiled + 1,
+                                 1,
+                                 Number,
+                                 VectorizedArrayType>;
 
   struct Info
   {
