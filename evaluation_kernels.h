@@ -73,19 +73,77 @@ namespace internal
     }
 
   private:
+      using VectorizationType = unsigned int;
+      static const unsigned int max_n_points_1D = 40;
+      
+      //using VectorizationType = Number;
+      
+      template<typename T1, typename T2>
+      struct Trait;
+      
+      template<typename T1>
+      struct Trait<T1, unsigned int>
+      {
+          using value_type = typename T1::value_type;
+          
+          static inline  DEAL_II_ALWAYS_INLINE unsigned int
+          create(const unsigned int v)
+          {
+              return v;
+          }
+      };
+      
+      template<typename T1>
+      struct Trait<T1, T1>
+      {
+          using value_type = T1;
+          
+          static inline  DEAL_II_ALWAYS_INLINE Number
+          create(const unsigned int v)
+          {
+              Number result = 0.0;
+              result[v] = 1.0;
+              return result;
+          }
+      };
+      
+      static inline DEAL_II_ALWAYS_INLINE typename Number::value_type
+      get_value(const Number & value, const unsigned int & i)
+      {
+          return value[i];
+      }
+      
+      static inline DEAL_II_ALWAYS_INLINE Number
+      get_value(const Number & value, const Number & )
+      {
+          return value;
+      }
+      
+      static inline DEAL_II_ALWAYS_INLINE void
+      set_value(Number & result, const typename Number::value_type & value, const unsigned int & i)
+      {
+          result[i] = value;
+      }
+      
+      static inline DEAL_II_ALWAYS_INLINE void
+      set_value(Number & result, const Number & value, const Number & i)
+      {
+          result = result * (Number(1.0)-i) + value * i;
+      }
+      
     template <int fe_degree, unsigned int side, bool transpose>
     static inline DEAL_II_ALWAYS_INLINE void
     interpolate_2D(const unsigned int given_degree,
-                   const unsigned int v,
+                   const VectorizationType v,
                    const Number *     weight,
                    Number *           values)
     {
-      typename Number::value_type temp[40];
+      typename Trait<Number, VectorizationType>::value_type temp[max_n_points_1D];
 
       const unsigned int points =
         (fe_degree != -1 ? fe_degree : given_degree) + 1;
 
-      AssertIndexRange(points, 40);
+      AssertIndexRange(points, max_n_points_1D);
 
       const unsigned int d = side / 2; // direction
       const unsigned int s = side % 2; // left or right surface
@@ -100,18 +158,18 @@ namespace internal
       // copy result back
       for (unsigned int i = 0, k = 0; i < r1; ++i)
         for (unsigned int j = 0; j < r2; ++j, ++k)
-          temp[k] = values[i * offset + stride + j][v];
+          temp[k] = get_value(values[i * offset + stride + j], v);
 
       // perform interpolation point by point (note: r1 * r2 == points^(dim-1))
       for (unsigned int i = 0, k = 0; i < r1; ++i)
         for (unsigned int j = 0; j < r2; ++j, ++k)
           {
-            typename Number::value_type sum = 0.0;
+            typename Trait<Number, VectorizationType>::value_type sum = 0.0;
             for (unsigned int h = 0; h < points; ++h)
-              sum += weight[(transpose ? 1 : points) * k +
-                            (transpose ? points : 1) * h][v] *
+              sum += get_value(weight[(transpose ? 1 : points) * k +
+                            (transpose ? points : 1) * h],v) *
                      temp[h];
-            values[i * offset + stride + j][v] = sum;
+            set_value(values[i * offset + stride + j], sum, v);
           }
     }
 
@@ -127,12 +185,12 @@ namespace internal
                         const Number *     weight,
                         Number *           values)
     {
-      typename Number::value_type temp[40];
+      typename Trait<Number, VectorizationType>::value_type temp[max_n_points_1D];
 
       const unsigned int points =
         (fe_degree != -1 ? fe_degree : given_degree) + 1;
 
-      AssertIndexRange(points, 40);
+      AssertIndexRange(points, max_n_points_1D);
 
       const unsigned int stride = Utilities::pow(points, direction);
 
@@ -152,17 +210,17 @@ namespace internal
         {
           // copy result back
           for (unsigned int k = 0; k < points; ++k)
-            temp[k] = values[dof_offset + k * stride + stride2 * g][v];
+            temp[k] = get_value(values[dof_offset + k * stride + stride2 * g],v);
 
           // perform interpolation point by point
           for (unsigned int k = 0; k < points; ++k)
             {
-              typename Number::value_type sum = 0.0;
+              typename Trait<Number, VectorizationType>::value_type sum = 0.0;
               for (unsigned int h = 0; h < points; ++h)
-                sum += weight[(transpose ? 1 : points) * k +
-                              (transpose ? points : 1) * h][v] *
+                sum += get_value(weight[(transpose ? 1 : points) * k +
+                              (transpose ? points : 1) * h],v) *
                        temp[h];
-              values[dof_offset + k * stride + stride2 * g][v] = sum;
+              set_value(values[dof_offset + k * stride + stride2 * g], sum, v);
             }
         }
     }
@@ -175,28 +233,28 @@ namespace internal
                         const Number *     weight,
                         Number *           values)
     {
-      typename Number::value_type temp[40];
+      typename Trait<Number, VectorizationType>::value_type temp[max_n_points_1D];
 
       const unsigned int points =
         (fe_degree != -1 ? fe_degree : given_degree) + 1;
 
-      AssertIndexRange(points, 40);
+      AssertIndexRange(points, max_n_points_1D);
 
       const unsigned int stride = Utilities::pow(points, direction);
 
       // copy result back
       for (unsigned int k = 0; k < points; ++k)
-        temp[k] = values[p + k * stride][v];
+        temp[k] = get_value(values[p + k * stride],v);
 
       // perform interpolation point by point
       for (unsigned int k = 0; k < points; ++k)
         {
-          typename Number::value_type sum = 0.0;
+          typename Trait<Number, VectorizationType>::value_type sum = 0.0;
           for (unsigned int h = 0; h < points; ++h)
-            sum += weight[(transpose ? 1 : points) * k +
-                          (transpose ? points : 1) * h][v] *
+            sum += get_value(weight[(transpose ? 1 : points) * k +
+                          (transpose ? points : 1) * h],v) *
                    temp[h];
-          values[p + k * stride][v] = sum;
+          set_value(values[p + k * stride], sum, v);
         }
     }
 
@@ -245,6 +303,8 @@ namespace internal
               if (mask == MatrixFreeFunctions::ConstraintKinds::unconstrained)
                 continue;
 
+              const auto vv = Trait<Number, VectorizationType>::create(v);
+              
               if (dim == 2) // 2D: only faces
                 {
                   const auto is_set = [](const auto a, const auto b) -> bool {
@@ -266,13 +326,13 @@ namespace internal
                                  MatrixFreeFunctions::ConstraintKinds::type_y))
                         interpolate_2D<fe_degree, 2, transpose>(
                           given_degree,
-                          v,
+                          vv,
                           weights,
                           values); // face 2
                       else
                         interpolate_2D<fe_degree, 3, transpose>(
                           given_degree,
-                          v,
+                          vv,
                           weights,
                           values); // face 3
                     }
@@ -323,34 +383,6 @@ namespace internal
                                                       face_to_point,
                                                       values);
 
-                  if (edges > 0)
-                    switch (edges)
-                      {
-                        case 0:
-                          break;
-                        case 1:
-                          helper.template process_edge<false, false, true>();
-                          break;
-                        case 2:
-                          helper.template process_edge<true, false, false>();
-                          break;
-                        case 3:
-                          helper.template process_edge<true, false, true>();
-                          break;
-                        case 4:
-                          helper.template process_edge<false, true, false>();
-                          break;
-                        case 5:
-                          helper.template process_edge<false, true, true>();
-                          break;
-                        case 6:
-                          helper.template process_edge<true, true, false>();
-                          break;
-                        case 7:
-                          helper.template process_edge<true, true, true>();
-                          break;
-                      }
-
                   if (faces > 0)
                     switch (faces)
                       {
@@ -378,6 +410,34 @@ namespace internal
                           helper.template process_faces<true, true, true>();
                           break;
                       }
+
+                  if (edges > 0)
+                    switch (edges)
+                      {
+                        case 0:
+                          break;
+                        case 1:
+                          helper.template process_edge<false, false, true>();
+                          break;
+                        case 2:
+                          helper.template process_edge<true, false, false>();
+                          break;
+                        case 3:
+                          helper.template process_edge<true, false, true>();
+                          break;
+                        case 4:
+                          helper.template process_edge<false, true, false>();
+                          break;
+                        case 5:
+                          helper.template process_edge<false, true, true>();
+                          break;
+                        case 6:
+                          helper.template process_edge<true, true, false>();
+                          break;
+                        case 7:
+                          helper.template process_edge<true, true, true>();
+                          break;
+                      }
                 }
               else
                 {
@@ -397,7 +457,7 @@ namespace internal
              const bool &                                 type_x,
              const bool &                                 type_y,
              const bool &                                 type_z,
-             const unsigned int &                         v,
+             const VectorizationType &                         v,
              const std::array<AlignedVector<Number>, 2> &interpolation_matrices,
              const std::array<unsigned int, 12> &        line_to_point,
              const std::array<unsigned int, 6> &         face_to_point,
@@ -417,7 +477,7 @@ namespace internal
       const bool &                                 type_x;
       const bool &                                 type_y;
       const bool &                                 type_z;
-      const unsigned int &                         v;
+      const VectorizationType &                         v;
       const std::array<AlignedVector<Number>, 2> &interpolation_matrices;
       const std::array<unsigned int, 12> &        line_to_point;
       const std::array<unsigned int, 6> &         face_to_point;

@@ -8,6 +8,7 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/tria.h>
 
+#include <deal.II/matrix_free/evaluation_kernels_hanging_nodes.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
@@ -70,6 +71,7 @@ test(unsigned int                                          size_approx,
           for (unsigned int j = 0; j < n_dofs_per_cell; ++j)
             values[j] = global_values[i + j];
 
+          if(false)
           internal::MyFEEvaluationImplHangingNodes<
             dim,
             VectorizedArrayType,
@@ -78,6 +80,18 @@ test(unsigned int                                          size_approx,
                                                      false,
                                                      masks,
                                                      values.data());
+          else if(false)
+          internal::FEEvaluationImplHangingNodes<
+            dim,
+            VectorizedArrayType,
+            false>::template run<degree, degree + 1>(1,
+                                                     fe_eval,
+                                                     false,
+                                                     masks,
+                                                     values.data());
+          else
+            internal::FEEvaluationHangingNodesFactory<dim, Number, VectorizedArrayType>::apply(
+                1, degree, fe_eval, false, masks, values.data());
 
           for (unsigned int j = 0; j < n_dofs_per_cell; ++j)
             global_values[i + j] = values[j];
@@ -99,6 +113,8 @@ main(int argc, char **argv)
 {
   const unsigned int degree      = argc > 1 ? atoi(argv[1]) : 1;
   const unsigned int size_approx = argc > 2 ? atoi(argv[2]) : 10000;
+  
+  (void) degree;
 
   using namespace dealii::internal::MatrixFreeFunctions;
 

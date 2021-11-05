@@ -497,10 +497,9 @@ private:
   void
   gather_plain(FEEval &phi, const VectorType1 &src)
   {
-    for (unsigned int
-           i = 0,
-           k = FEEval::static_dofs_per_component * phi.get_current_cell_index();
-         i < FEEval::static_dofs_per_component;
+    for (unsigned int i = 0,
+                      k = phi.dofs_per_cell * phi.get_current_cell_index();
+         i < phi.dofs_per_cell;
          ++i, ++k)
       phi.begin_dof_values()[i] = src[k];
   }
@@ -528,10 +527,9 @@ private:
   void
   scatter_plain(FEEval &phi, VectorType1 &dst)
   {
-    for (unsigned int
-           i = 0,
-           k = FEEval::static_dofs_per_component * phi.get_current_cell_index();
-         i < FEEval::static_dofs_per_component;
+    for (unsigned int i = 0,
+                      k = phi.dofs_per_cell * phi.get_current_cell_index();
+         i < phi.dofs_per_cell;
          ++i, ++k)
       dst[k] += phi.begin_dof_values()[i];
   }
