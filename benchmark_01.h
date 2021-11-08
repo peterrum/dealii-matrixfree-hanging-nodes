@@ -3,6 +3,8 @@
 
 #include <deal.II/dofs/dof_tools.h>
 
+#include <deal.II/fe/mapping_q_cache.h>
+
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
@@ -134,6 +136,7 @@ public:
   {
     unsigned int n_levels         = 0;
     unsigned int n_cells          = 0;
+    unsigned int n_dofs           = 0;
     unsigned int n_cells_n        = 0;
     unsigned int n_cells_hn       = 0;
     unsigned int n_macro_cells    = 0;
@@ -183,9 +186,26 @@ public:
     else
       AssertThrow(false, ExcMessage("Unknown geometry type!"));
 
+#if false
     const MappingQ1<dim> mapping;
-    const FE_Q<dim>      fe(degree);
-    const QGauss<dim>    quadrature(degree + 1);
+#else
+    MappingQCache<dim> mapping(2);
+    mapping.initialize(
+      MappingQ1<dim>(),
+      tria,
+      [](const auto &, const auto &point) {
+        Point<dim> result;
+
+        for (int d = 0; d < dim; ++d)
+          result[d] = std::sin(point[d]) * 0.000001;
+
+        return result;
+      },
+      true);
+#endif
+
+    const FE_Q<dim>   fe(degree);
+    const QGauss<dim> quadrature(degree + 1);
 
     dof_handler.distribute_dofs(fe);
 
@@ -214,6 +234,7 @@ public:
     Info info;
 
     info.n_cells       = tria.n_active_cells();
+    info.n_dofs        = dof_handler.n_dofs();
     info.n_macro_cells = matrix_free.n_cell_batches();
 
     constexpr unsigned int n_lanes = VectorizedArrayType::size();
@@ -314,13 +335,13 @@ public:
       {
         std::cout << "Number of lanes with hn constraints:" << std::endl;
         for (const auto i : sort_and_count(n_lanes_with_hn))
-          std::cout << "  " << i.first << " : " << i.second << std::endl;
+          std::cout << "  " << (i.first + 1) << " : " << i.second << std::endl;
         std::cout << std::endl;
 
         std::cout << "Number of lanes with max same hn constraints:"
                   << std::endl;
         for (const auto i : sort_and_count(n_lanes_with_hn_same))
-          std::cout << "  " << i.first << " : " << i.second << std::endl;
+          std::cout << "  " << (i.first + 1) << " : " << i.second << std::endl;
         std::cout << std::endl;
 
         const auto to_string = [](std::uint16_t in) {
@@ -345,6 +366,33 @@ public:
           if (i.second > 0)
             std::cout << "  " << to_string(i.first) << " : " << i.second
                       << std::endl;
+        std::cout << std::endl;
+
+        std::map<std::pair<unsigned int, unsigned int>, unsigned int>
+          hn_types_reduced;
+
+        const auto count_edge_bits = [](const auto m) -> unsigned int {
+          return ((m >> 6) & 1) + ((m >> 7) & 1) + ((m >> 8) & 1);
+        };
+
+        const auto count_face_bits = [](const auto m) -> unsigned int {
+          return ((m >> 3) & 1) + ((m >> 4) & 1) + ((m >> 5) & 1);
+        };
+
+        for (const auto i : sort_and_count(hn_types))
+          if (i.second > 0)
+            hn_types_reduced[{count_edge_bits(i.first),
+                              count_face_bits(i.first)}] += i.second;
+
+        std::cout << "Number of occurrences of ConstraintKinds (reduced):"
+                  << std::endl;
+        std::cout << "  1e0f  : " << hn_types_reduced[{1, 0}] << std::endl;
+        std::cout << "  2e0f  : " << hn_types_reduced[{2, 0}] << std::endl;
+        std::cout << "  3e0f  : " << hn_types_reduced[{3, 0}] << std::endl;
+        std::cout << "  0e1f  : " << hn_types_reduced[{0, 1}] << std::endl;
+        std::cout << "  1e1f  : " << hn_types_reduced[{1, 1}] << std::endl;
+        std::cout << "  0e2f  : " << hn_types_reduced[{0, 2}] << std::endl;
+        std::cout << "  0e3f  : " << hn_types_reduced[{0, 3}] << std::endl;
         std::cout << std::endl;
       }
 
