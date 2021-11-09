@@ -6,6 +6,37 @@ namespace dealii::GridGenerator
 {
   template <int dim>
   void
+  create_step(Triangulation<dim> &tria, const unsigned int n_refinements)
+  {
+    hyper_cube(tria, -1.0, +1.0);
+
+    if (n_refinements == 0)
+      return;
+
+    tria.refine_global(1);
+
+    for (unsigned int i = 1; i < n_refinements; ++i)
+      {
+        for (auto cell : tria.active_cell_iterators())
+          if (cell->is_locally_owned())
+            {
+              bool flag = true;
+              for (int d = 0; d < 1; d++)
+                if (cell->center()[d] > 0.0)
+                  flag = false;
+              if (flag)
+                cell->set_refine_flag();
+            }
+        tria.execute_coarsening_and_refinement();
+      }
+
+    AssertDimension(tria.n_global_levels() - 1, n_refinements);
+  }
+
+
+
+  template <int dim>
+  void
   create_quadrant(Triangulation<dim> &tria, const unsigned int n_refinements)
   {
     // according to the description in A FLEXIBLE, PARALLEL, ADAPTIVE

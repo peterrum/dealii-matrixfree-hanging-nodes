@@ -184,6 +184,8 @@ public:
       GridGenerator::create_annulus(tria, n_refinements);
     else if (geometry_type == "quadrant")
       GridGenerator::create_quadrant(tria, n_refinements);
+    else if (geometry_type == "step")
+      GridGenerator::create_step(tria, n_refinements);
     else if (geometry_type == "quadrant_flexible")
       GridGenerator::create_quadrant_flexible(tria, n_refinements);
     else
@@ -227,6 +229,34 @@ public:
 
     matrix_free.reinit(
       *mapping, dof_handler, constraints, quadrature, additional_data);
+
+    if (true /*TODO*/)
+      {
+        additional_data.cell_vectorization_category.assign(
+          tria.n_active_cells(), 0);
+        additional_data.cell_vectorization_categories_strict = true;
+
+        for (unsigned int i = 0; i < matrix_free.n_cell_batches(); ++i)
+          for (unsigned int v = 0;
+               v < matrix_free.n_active_entries_per_cell_batch(i);
+               ++v)
+            additional_data.cell_vectorization_category
+              [matrix_free.get_cell_iterator(i, v)->active_cell_index()] =
+              static_cast<unsigned int>(
+                matrix_free.get_dof_info().hanging_node_constraint_masks
+                  [i * VectorizedArrayType::size() + v]);
+
+        auto temp = additional_data.cell_vectorization_category;
+
+        std::sort(temp.begin(), temp.end());
+        temp.erase(std::unique(temp.begin(), temp.end()), temp.end());
+
+        if (false)
+          std::cout << temp.size() << std::endl;
+
+        matrix_free.reinit(
+          *mapping, dof_handler, constraints, quadrature, additional_data);
+      }
 
     if (setup_only_fast_algorithm == false)
       {
