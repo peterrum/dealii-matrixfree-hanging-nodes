@@ -150,6 +150,7 @@ private:
   const unsigned int n_repetitions = 10;
   const unsigned int degree;
   const bool         setup_only_fast_algorithm;
+  const bool         test_high_order_mapping;
   bool               do_cg;
   bool               do_apply_constraints;
   bool               do_apply_quadrature_kernel;
@@ -164,9 +165,11 @@ public:
   Test(const unsigned int degree,
        const std::string  geometry_type,
        const unsigned int n_refinements,
-       const bool         setup_only_fast_algorithm)
+       const bool         setup_only_fast_algorithm,
+       const bool         test_high_order_mapping = false)
     : degree(degree)
     , setup_only_fast_algorithm(setup_only_fast_algorithm)
+    , test_high_order_mapping(test_high_order_mapping)
     , do_cg(false)
     , do_apply_constraints(false)
     , do_apply_quadrature_kernel(false)
@@ -186,23 +189,30 @@ public:
     else
       AssertThrow(false, ExcMessage("Unknown geometry type!"));
 
-#if false
-    const MappingQ1<dim> mapping;
-#else
-    MappingQCache<dim> mapping(2);
-    mapping.initialize(
-      MappingQ1<dim>(),
-      tria,
-      [](const auto &, const auto &point) {
-        Point<dim> result;
+    std::unique_ptr<Mapping<dim>> mapping;
 
-        for (int d = 0; d < dim; ++d)
-          result[d] = std::sin(point[d]) * 0.000001;
+    if (test_high_order_mapping == false)
+      {
+        mapping = std::make_unique<MappingQ1<dim>>();
+      }
+    else
+      {
+        auto mapping_temp = new MappingQCache<dim>(2);
+        mapping_temp->initialize(
+          MappingQ1<dim>(),
+          tria,
+          [](const auto &, const auto &point) {
+            Point<dim> result;
 
-        return result;
-      },
-      true);
-#endif
+            for (int d = 0; d < dim; ++d)
+              result[d] = std::sin(point[d]) * 0.000001;
+
+            return result;
+          },
+          true);
+
+        mapping = std::unique_ptr<Mapping<dim>>(mapping_temp);
+      }
 
     const FE_Q<dim>   fe(degree);
     const QGauss<dim> quadrature(degree + 1);
@@ -216,7 +226,7 @@ public:
     additional_data.mapping_update_flags = update_gradients;
 
     matrix_free.reinit(
-      mapping, dof_handler, constraints, quadrature, additional_data);
+      *mapping, dof_handler, constraints, quadrature, additional_data);
 
     if (setup_only_fast_algorithm == false)
       {
@@ -224,7 +234,7 @@ public:
 
         additional_data.use_fast_hanging_node_algorithm = false;
         matrix_free_slow.reinit(
-          mapping, dof_handler, constraints, quadrature, additional_data);
+          *mapping, dof_handler, constraints, quadrature, additional_data);
       }
   }
 
@@ -304,13 +314,23 @@ public:
                     constraint_mask[v])]++;
                 }
 
-            n_lanes_with_hn_same[std::max_element(
-                                   n_lanes_with_hn_same_local.begin(),
-                                   n_lanes_with_hn_same_local.end(),
-                                   [](const auto &a, const auto &b) {
-                                     return a.second < b.second;
-                                   })
-                                   ->second]++;
+            if (true /*todo*/)
+              {
+                for (const auto i : n_lanes_with_hn_same_local)
+                  if (i.second != 0)
+                    n_lanes_with_hn_same[i.second - 1]++;
+              }
+            else
+              {
+                n_lanes_with_hn_same[std::max_element(
+                                       n_lanes_with_hn_same_local.begin(),
+                                       n_lanes_with_hn_same_local.end(),
+                                       [](const auto &a, const auto &b) {
+                                         return a.second < b.second;
+                                       })
+                                       ->second -
+                                     1]++;
+              }
 
             info.n_cells_hn += n_lanes_with_hn_counter;
             info.n_cells_n +=
