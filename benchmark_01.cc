@@ -10,8 +10,52 @@ run(const std::string  geometry_type,
     const bool         setup_only_fast_algorithm,
     const bool         test_high_order_mapping,
     const bool         categorize,
+    const std::string  vectorization_type,
     const bool         print_details)
 {
+  if (vectorization_type == "index")
+    {
+      AssertThrow(
+        (internal::FEEvaluationImplHangingNodes<dim,
+                                                VectorizedArray<double>,
+                                                false>::VectorizationType ==
+         internal::FEEvaluationImplHangingNodes<
+           dim,
+           VectorizedArray<double>,
+           false>::VectorizationTypes::index),
+        ExcInternalError());
+    }
+  else if (vectorization_type == "group")
+    {
+      AssertThrow(
+        (internal::FEEvaluationImplHangingNodes<dim,
+                                                VectorizedArray<double>,
+                                                false>::VectorizationType ==
+         internal::FEEvaluationImplHangingNodes<
+           dim,
+           VectorizedArray<double>,
+           false>::VectorizationTypes::group),
+        ExcInternalError());
+    }
+  else if (vectorization_type == "sorted")
+    {
+      AssertThrow(
+        (internal::FEEvaluationImplHangingNodes<dim,
+                                                VectorizedArray<double>,
+                                                false>::VectorizationType ==
+         internal::FEEvaluationImplHangingNodes<
+           dim,
+           VectorizedArray<double>,
+           false>::VectorizationTypes::sorted),
+        ExcInternalError());
+      AssertThrow(categorize, ExcInternalError());
+    }
+  else
+    {
+      AssertThrow(false, ExcInternalError());
+    }
+
+
   ConvergenceTable table;
 
   for (unsigned int n_refinements = min_n_refinements;
@@ -147,10 +191,12 @@ main(int argc, char **argv)
   const unsigned int max_n_refinements = argc > 3 ? atoi(argv[3]) : 6;
   const unsigned int degree_min        = argc > 4 ? atoi(argv[4]) : 1;
   const unsigned int degree_max        = argc > 5 ? atoi(argv[5]) : degree_min;
-  const bool         test_high_order_mapping   = argc > 6 ? atoi(argv[6]) : 0;
-  const bool         categorize                = argc > 7 ? atoi(argv[7]) : 0;
-  const bool         setup_only_fast_algorithm = false;
-  const bool         print_details             = true;
+  const bool         test_high_order_mapping = argc > 6 ? atoi(argv[6]) : 0;
+  const bool         categorize              = argc > 7 ? atoi(argv[7]) : 0;
+  const std::string  vectorization_type =
+    argc > 8 ? std::string(argv[8]) : std::string("index");
+  const bool setup_only_fast_algorithm = false;
+  const bool print_details             = true;
 
   run<dim, fe_degree_precomiled>(geometry_type,
                                  min_n_refinements,
@@ -160,5 +206,6 @@ main(int argc, char **argv)
                                  setup_only_fast_algorithm,
                                  test_high_order_mapping,
                                  categorize,
+                                 vectorization_type,
                                  print_details);
 }

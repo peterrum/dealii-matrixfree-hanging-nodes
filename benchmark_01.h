@@ -5,6 +5,7 @@
 
 #include <deal.II/fe/mapping_q_cache.h>
 
+#include <deal.II/matrix_free/evaluation_kernels_hanging_nodes.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
