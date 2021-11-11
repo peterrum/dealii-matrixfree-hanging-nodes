@@ -166,7 +166,8 @@ public:
        const std::string  geometry_type,
        const unsigned int n_refinements,
        const bool         setup_only_fast_algorithm,
-       const bool         test_high_order_mapping = false)
+       const bool         test_high_order_mapping = false,
+       const bool         categorize              = false)
     : degree(degree)
     , setup_only_fast_algorithm(setup_only_fast_algorithm)
     , test_high_order_mapping(test_high_order_mapping)
@@ -230,7 +231,7 @@ public:
     matrix_free.reinit(
       *mapping, dof_handler, constraints, quadrature, additional_data);
 
-    if (true /*TODO*/)
+    if (categorize)
       {
         additional_data.cell_vectorization_category.assign(
           tria.n_active_cells(), 0);

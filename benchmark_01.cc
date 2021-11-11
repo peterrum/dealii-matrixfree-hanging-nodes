@@ -9,6 +9,7 @@ run(const std::string  geometry_type,
     const unsigned int degree_max,
     const bool         setup_only_fast_algorithm,
     const bool         test_high_order_mapping,
+    const bool         categorize,
     const bool         print_details)
 {
   ConvergenceTable table;
@@ -22,7 +23,8 @@ run(const std::string  geometry_type,
                                              geometry_type,
                                              n_refinements,
                                              setup_only_fast_algorithm,
-                                             test_high_order_mapping);
+                                             test_high_order_mapping,
+                                             categorize);
 
         const auto info = test.get_info(print_details);
 
@@ -146,6 +148,7 @@ main(int argc, char **argv)
   const unsigned int degree_min        = argc > 4 ? atoi(argv[4]) : 1;
   const unsigned int degree_max        = argc > 5 ? atoi(argv[5]) : degree_min;
   const bool         test_high_order_mapping   = argc > 6 ? atoi(argv[6]) : 0;
+  const bool         categorize                = argc > 7 ? atoi(argv[7]) : 0;
   const bool         setup_only_fast_algorithm = false;
   const bool         print_details             = true;
 
@@ -156,5 +159,6 @@ main(int argc, char **argv)
                                  degree_max,
                                  setup_only_fast_algorithm,
                                  test_high_order_mapping,
+                                 categorize,
                                  print_details);
 }
