@@ -253,6 +253,11 @@ run(const std::string  geometry_type,
 
         if (use_fast_hanging_node_algorithm == false)
           {
+            IndexSet locally_relevant_dofs;
+            DoFTools::extract_locally_relevant_dofs(dof_handler,
+                                                    locally_relevant_dofs);
+            constraints.reinit(locally_relevant_dofs);
+
             DoFTools::make_hanging_node_constraints(dof_handler, constraints);
             additional_data.use_fast_hanging_node_algorithm = false;
           }
@@ -399,12 +404,16 @@ main(int argc, char **argv)
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
-  const unsigned int n_refinements = argc > 2 ? atoi(argv[2]) : 6;
-  const unsigned int degree        = argc > 3 ? atoi(argv[3]) : 1;
-  const bool         print_details = true;
+  const unsigned int n_refinements           = argc > 2 ? atoi(argv[2]) : 6;
+  const unsigned int degree                  = argc > 3 ? atoi(argv[3]) : 1;
+  const bool         perform_communication   = argc > 4 ? atoi(argv[4]) : 1;
+  const bool use_fast_hanging_node_algorithm = argc > 5 ? atoi(argv[5]) : 1;
+  const bool print_details                   = true;
 
   run<dim, fe_degree_precomiled>(geometry_type,
                                  n_refinements,
                                  degree,
-                                 print_details);
+                                 print_details,
+                                 perform_communication,
+                                 use_fast_hanging_node_algorithm);
 }
