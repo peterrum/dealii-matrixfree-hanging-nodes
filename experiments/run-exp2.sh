@@ -1,4 +1,4 @@
-for types in "CACHES" "FLOPS_DP"
+for types in "BRANCH" "CACHES" "FLOPS_DP"
 do
     for degree in 1 2 3 4 5 6
     do
