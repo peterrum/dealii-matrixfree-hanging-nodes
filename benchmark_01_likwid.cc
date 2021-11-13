@@ -16,13 +16,18 @@ run(const std::string  geometry_type,
                                        n_refinements,
                                        setup_only_fast_algorithm);
 
-  const auto info = test.get_info(false);
-
   ConvergenceTable table;
+
+  const auto info = test.get_info(false);
   table.add_value("n_levels", info.n_levels);
   table.add_value("degree", degree);
   table.add_value("n_dofs", info.n_dofs);
   table.add_value("n_cells", info.n_cells);
+  table.add_value("n_cells_n", info.n_cells_n);
+  table.add_value("n_cells_hn", info.n_cells_hn);
+  table.add_value("n_macro_cells", info.n_macro_cells);
+  table.add_value("n_macro_cells_n", info.n_macro_cells_n);
+  table.add_value("n_macro_cells_hn", info.n_macro_cells_hn);
 
   const auto t0 = test.run(do_cg,
                            do_apply_constraints,
