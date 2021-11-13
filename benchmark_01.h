@@ -148,7 +148,7 @@ public:
   };
 
 private:
-  const unsigned int n_repetitions = 10;
+  const unsigned int n_repetitions = 100;
   const unsigned int degree;
   const bool         setup_only_fast_algorithm;
   const bool         test_high_order_mapping;
@@ -368,7 +368,7 @@ public:
             info.n_cells_n +=
               (n_vectorization_actual - n_lanes_with_hn_counter);
 
-            n_lanes_with_hn[n_lanes_with_hn_counter]++;
+            n_lanes_with_hn[n_lanes_with_hn_counter - 1]++;
           }
         else
           {
@@ -496,7 +496,11 @@ public:
             j = 1.0;
       }
 
+#if false
     double min_time = 1e10;
+#else
+    double min_time = 0.0;
+#endif
 
 #ifdef LIKWID_PERFMON
     LIKWID_MARKER_START("kernel");
@@ -515,20 +519,31 @@ public:
         else
           vmult(dst1, src1);
 
-
+#if false
         min_time =
           std::min<double>(min_time,
                            std::chrono::duration_cast<std::chrono::nanoseconds>(
                              std::chrono::system_clock::now() - temp)
                                .count() /
                              1e9);
+#else
+        min_time += std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      std::chrono::system_clock::now() - temp)
+                      .count() /
+                    1e9;
+#endif
       }
 
 #ifdef LIKWID_PERFMON
     LIKWID_MARKER_STOP("kernel");
 #endif
 
+#if false
     min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
+#else
+    min_time = Utilities::MPI::sum(min_time / n_repetitions, MPI_COMM_WORLD) /
+               Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD);
+#endif
 
     return min_time;
   }
