@@ -1,5 +1,17 @@
 #include "benchmark_01.h"
 
+struct Parameters
+{
+    std::string  geometry_type;
+    unsigned int n_refinements;
+    unsigned int degree;
+    bool         setup_only_fast_algorithm;
+    bool         test_high_order_mapping;
+    bool         categorize;
+    std::string  vectorization_type;
+    bool         print_details;
+};
+
 template <unsigned int dim, int fe_degree_precomiled>
 void
 run(const std::string  geometry_type,
@@ -13,67 +25,86 @@ run(const std::string  geometry_type,
     const std::string  vectorization_type,
     const bool         print_details)
 {
-  if (vectorization_type == "index")
-    {
-      AssertThrow(
-        (internal::FEEvaluationImplHangingNodes<dim,
-                                                VectorizedArray<double>,
-                                                false>::VectorizationType ==
-         internal::FEEvaluationImplHangingNodes<
-           dim,
-           VectorizedArray<double>,
-           false>::VectorizationTypes::index),
-        ExcInternalError());
-    }
-  else if (vectorization_type == "group")
-    {
-      AssertThrow(
-        (internal::FEEvaluationImplHangingNodes<dim,
-                                                VectorizedArray<double>,
-                                                false>::VectorizationType ==
-         internal::FEEvaluationImplHangingNodes<
-           dim,
-           VectorizedArray<double>,
-           false>::VectorizationTypes::group),
-        ExcInternalError());
-    }
-  else if (vectorization_type == "sorted")
-    {
-      AssertThrow(
-        (internal::FEEvaluationImplHangingNodes<dim,
-                                                VectorizedArray<double>,
-                                                false>::VectorizationType ==
-         internal::FEEvaluationImplHangingNodes<
-           dim,
-           VectorizedArray<double>,
-           false>::VectorizationTypes::sorted),
-        ExcInternalError());
-      AssertThrow(categorize, ExcInternalError());
-    }
-  else
-    {
-      AssertThrow(false, ExcInternalError());
-    }
-
-
   ConvergenceTable table;
+  
+  std::vector<Parameters> parameters_vector;
 
   for (unsigned int n_refinements = min_n_refinements;
        n_refinements <= max_n_refinements;
        ++n_refinements)
     for (unsigned int degree = degree_min; degree <= degree_max; ++degree)
       {
-        Test<dim, fe_degree_precomiled> test(degree,
-                                             geometry_type,
-                                             n_refinements,
-                                             setup_only_fast_algorithm,
-                                             test_high_order_mapping,
-                                             categorize);
+        Parameters parameters;
+        
+        parameters.geometry_type = geometry_type;
+        parameters.n_refinements = n_refinements;
+        parameters.degree = degree;
+        parameters.setup_only_fast_algorithm = setup_only_fast_algorithm;
+        parameters.test_high_order_mapping = test_high_order_mapping;
+        parameters.categorize = categorize;
+        parameters.vectorization_type = vectorization_type;
+        parameters.print_details = print_details;
+        
+        parameters_vector.emplace_back(parameters);
+      }
+  
+  
+  for (const auto & param : parameters_vector)
+      {
+        if (param.vectorization_type == "index")
+          {
+            AssertThrow(
+              (internal::FEEvaluationImplHangingNodes<dim,
+                                                      VectorizedArray<double>,
+                                                      false>::VectorizationType ==
+               internal::FEEvaluationImplHangingNodes<
+                 dim,
+                 VectorizedArray<double>,
+                 false>::VectorizationTypes::index),
+              ExcInternalError());
+          }
+        else if (param.vectorization_type == "group")
+          {
+            AssertThrow(
+              (internal::FEEvaluationImplHangingNodes<dim,
+                                                      VectorizedArray<double>,
+                                                      false>::VectorizationType ==
+               internal::FEEvaluationImplHangingNodes<
+                 dim,
+                 VectorizedArray<double>,
+                 false>::VectorizationTypes::group),
+              ExcInternalError());
+          }
+        else if (param.vectorization_type == "sorted")
+          {
+            AssertThrow(
+              (internal::FEEvaluationImplHangingNodes<dim,
+                                                      VectorizedArray<double>,
+                                                      false>::VectorizationType ==
+               internal::FEEvaluationImplHangingNodes<
+                 dim,
+                 VectorizedArray<double>,
+                 false>::VectorizationTypes::sorted),
+              ExcInternalError());
+            AssertThrow(param.categorize, ExcInternalError());
+          }
+        else
+          {
+            AssertThrow(false, ExcInternalError());
+          }
+        
+        
+        Test<dim, fe_degree_precomiled> test(param.degree,
+                                             param.geometry_type,
+                                             param.n_refinements,
+                                             param.setup_only_fast_algorithm,
+                                             param.test_high_order_mapping,
+                                             param.categorize);
 
-        const auto info = test.get_info(print_details);
+        const auto info = test.get_info(param.print_details);
 
         table.add_value("n_levels", info.n_levels);
-        table.add_value("degree", degree);
+        table.add_value("degree", param.degree);
         table.add_value("n_dofs", info.n_dofs);
         table.add_value("n_cells", info.n_cells);
         table.add_value("n_cells_n", info.n_cells_n);
@@ -126,7 +157,7 @@ run(const std::string  geometry_type,
         table.set_scientific("eta5", true);
 
         // CG (SC) with old algorithm
-        if (setup_only_fast_algorithm == false)
+        if (param.setup_only_fast_algorithm == false)
           {
             const auto t6 = test.run(true, false, true, false);
             const auto t7 = test.run(true, true, true, false);
@@ -139,7 +170,7 @@ run(const std::string  geometry_type,
             table.set_scientific("eta7", true);
           }
 
-        if (print_details &&
+        if (param.print_details &&
             Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
           {
             table.write_text(std::cout);
@@ -147,7 +178,7 @@ run(const std::string  geometry_type,
           }
       }
 
-  if (print_details && Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+  if (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
     {
       table.write_text(std::cout);
       std::cout << std::endl;

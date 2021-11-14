@@ -22,6 +22,12 @@ DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 FIND_LIBRARY(LIKWID likwid HINTS $ENV{LIKWID_LIB})
 
+IF(LIKWID) 
+  MESSAGE("Configuration with LIKWID")
+ELSE()
+  MESSAGE("Configuration without LIKWID")
+ENDIF()
+
 file(GLOB files "*.cc")
 foreach(file ${files})
   get_filename_component(app ${file} NAME_WLE)

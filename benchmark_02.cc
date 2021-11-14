@@ -373,8 +373,12 @@ run(const std::string  geometry_type,
       };
 
       runner(tria_pdt, "pdt", true);
-      runner(tria_pft_0, "pft_0", false);
-      runner(tria_pft_1, "pft_1", false);
+
+      if(false)
+        runner(tria_pft_0, "pft_0", false);
+
+      if(false)
+        runner(tria_pft_1, "pft_1", false);
 
       if (print_details && Utilities::MPI::this_mpi_process(comm) == 0)
         {

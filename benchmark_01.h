@@ -11,6 +11,7 @@
 
 #ifdef LIKWID_PERFMON
 #  include <likwid.h>
+#  include <likwid-marker.h>
 #endif
 
 #include "benchmark.h"
@@ -220,18 +221,18 @@ public:
 
     const FE_Q<dim>   fe(degree);
     const QGauss<dim> quadrature(degree + 1);
-
+    
     dof_handler.distribute_dofs(fe);
-
+    
     AffineConstraints<Number> constraints;
 
     typename MatrixFree<dim, Number, VectorizedArrayType>::AdditionalData
       additional_data;
     additional_data.mapping_update_flags = update_gradients;
-
+    
     matrix_free.reinit(
       *mapping, dof_handler, constraints, quadrature, additional_data);
-
+    
     if (categorize)
       {
         additional_data.cell_vectorization_category.assign(
@@ -259,7 +260,7 @@ public:
         matrix_free.reinit(
           *mapping, dof_handler, constraints, quadrature, additional_data);
       }
-
+    
     if (setup_only_fast_algorithm == false)
       {
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
