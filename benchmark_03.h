@@ -344,8 +344,9 @@ main(int argc, char **argv)
   if (memory_type == "host")
     run<dim, fe_degree, MemorySpace::Host>(geometry_type);
 #ifdef DEAL_II_COMPILER_CUDA_AWARE
-  else
+  else if (memory_type == "cuda")
     run<dim, fe_degree, MemorySpace::CUDA>(geometry_type);
 #endif
-  else AssertThrow(false, ExcNotImplemented());
+  else
+    AssertThrow(false, ExcNotImplemented());
 }
