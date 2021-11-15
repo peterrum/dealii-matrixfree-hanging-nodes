@@ -164,6 +164,42 @@ private:
 
 #ifdef DEAL_II_COMPILER_CUDA_AWARE
 template <int dim, int fe_degree, typename Number>
+class LaplaceOperatorQuad
+{
+public:
+  __device__ void
+  operator()(
+    CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, Number>
+      *fe_eval) const
+  {
+    fe_eval->submit_gradient(fe_eval->get_gradient());
+  }
+};
+
+template <int dim, int fe_degree, typename Number>
+class LaplaceOperatorLocal
+{
+public:
+  __device__ void
+  operator()(
+    const unsigned int                                          cell,
+    const typename CUDAWrappers::MatrixFree<dim, Number>::Data *gpu_data,
+    CUDAWrappers::SharedData<dim, Number> *                     shared_data,
+    const Number *                                              src,
+    Number *                                                    dst) const
+  {
+    CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, Number>
+      fe_eval(cell, gpu_data, shared_data);
+    fe_eval.read_dof_values(src);
+    fe_eval.evaluate(false, true);
+    fe_eval.apply_for_each_quad_point(
+      LaplaceOperatorQuad<dm, fe_degree, Number>());
+    fe_eval.integrate(false, true);
+    fe_eval.distribute_local_to_global(dst);
+  }
+};
+
+template <int dim, int fe_degree, typename Number>
 class LaplaceOperator<dim, fe_degree, Number, MemorySpace::CUDA>
 {
 public:
@@ -192,42 +228,11 @@ public:
   void
   vmult(VectorType &dst, const VectorType &src) const
   {
-    LaplaceOperatorLocal local_operator;
+    LaplaceOperatorLocal<dm, fe_degree, Number> local_operator;
     matrix_free.cell_loop(local_operator, dst, src);
   }
 
 private:
-  class LaplaceOperatorLocal
-  {
-  public:
-    __device__ void
-    operator()(
-      const unsigned int                                          cell,
-      const typename CUDAWrappers::MatrixFree<dim, Number>::Data *gpu_data,
-      CUDAWrappers::SharedData<dim, Number> *                     shared_data,
-      const Number *                                              src,
-      Number *                                                    dst) const
-    {
-      CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, Number>
-        fe_eval(cell, gpu_data, shared_data);
-      fe_eval.read_dof_values(src);
-      fe_eval.evaluate(false, true);
-      fe_eval.apply_for_each_quad_point(LaplaceOperatorQuad());
-      fe_eval.integrate(false, true);
-      fe_eval.distribute_local_to_global(dst);
-    }
-  };
-
-  class LaplaceOperatorQuad
-  {
-  public:
-    __device__ void
-    operator()(CUDAWrappers::FEEvaluation<dim, fe_degree> *fe_eval) const
-    {
-      fe_eval->submit_gradient(fe_eval->get_gradient());
-    }
-  };
-
   CUDAWrappers::MatrixFree<dim, Number> matrix_free;
 };
 #endif
