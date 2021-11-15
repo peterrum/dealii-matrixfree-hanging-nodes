@@ -8,6 +8,8 @@
 
 #include <deal.II/grid/grid_generator.h>
 
+#include <deal.II/matrix_free/cuda_fe_evaluation.h>
+#include <deal.II/matrix_free/cuda_matrix_free.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
@@ -92,8 +94,6 @@ namespace dealii::GridGenerator
               cell->set_refine_flag();
         tria.execute_coarsening_and_refinement();
       }
-
-    // AssertDimension(tria.n_global_levels() - 1, n_refinements);
   }
 } // namespace dealii::GridGenerator
 
@@ -108,7 +108,6 @@ class LaplaceOperator<dim, fe_degree, Number, MemorySpace::Host>
 public:
   using VectorType =
     LinearAlgebra::distributed::Vector<Number, MemorySpace::Host>;
-
 
   LaplaceOperator(const Mapping<dim> &             mapping,
                   const DoFHandler<dim> &          dof_handler,
@@ -156,6 +155,79 @@ private:
 
   MatrixFree<dim, Number> matrix_free;
 };
+
+
+
+#ifdef DEAL_II_COMPILER_CUDA_AWARE
+template <int dim, int fe_degree, typename Number>
+class LaplaceOperator<dim, fe_degree, Number, MemorySpace::CUDA>
+{
+public:
+  using VectorType =
+    LinearAlgebra::distributed::Vector<Number, MemorySpace::CUDA>;
+
+  LaplaceOperator(const Mapping<dim> &             mapping,
+                  const DoFHandler<dim> &          dof_handler,
+                  const AffineConstraints<Number> &constraints,
+                  const Quadrature<1> &            quadrature)
+  {
+    typename CUDAWrappers::MatrixFree<dim, Number>::AdditionalData
+      additional_data;
+    additional_data.mapping_update_flags = update_gradients;
+
+    matrix_free.reinit(
+      mapping, dof_handler, constraints, quadrature, additional_data);
+  }
+
+  void
+  initialize_dof_vector(VectorType &vec) const
+  {
+    matrix_free.initialize_dof_vector(vec);
+  }
+
+  void
+  vmult(VectorType &dst, const VectorType &src) const
+  {
+    LaplaceOperatorLocal<dim, fe_degree> local_operator;
+    matrix_free.cell_loop(local_operator, dst, src);
+  }
+
+private:
+  template <int dim, int fe_degree>
+  class LaplaceOperatorLocal
+  {
+  public:
+    __device__ void
+    operator()(
+      const unsigned int                                          cell,
+      const typename CUDAWrappers::MatrixFree<dim, double>::Data *gpu_data,
+      CUDAWrappers::SharedData<dim, double> *                     shared_data,
+      const double *                                              src,
+      double *                                                    dst) const
+    {
+      CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, double>
+        fe_eval(cell, gpu_data, shared_data);
+      fe_eval.read_dof_values(src);
+      fe_eval.evaluate(false, true);
+      fe_eval.apply_for_each_quad_point(LaplaceOperatorQuad());
+      fe_eval.integrate(false, true);
+      fe_eval.distribute_local_to_global(dst);
+    }
+  };
+
+  class LaplaceOperatorQuad
+  {
+  public:
+    __device__ void
+    operator()(CUDAWrappers::FEEvaluation<dim, fe_degree> *fe_eval) const
+    {
+      fe_eval->submit_gradient(fe_eval->get_gradient());
+    }
+  };
+
+  CUDAWrappers::MatrixFree<dim, Number> matrix_free;
+};
+#endif
 
 
 
