@@ -2,52 +2,40 @@
 
 struct Parameters
 {
-    std::string  geometry_type;
-    unsigned int n_refinements;
-    unsigned int degree;
-    bool         setup_only_fast_algorithm;
-    bool         test_high_order_mapping;
-    bool         categorize;
-    std::string  vectorization_type;
-    bool         print_details;
+    Parameters() = default;
+    
+    Parameters(const std::string & file_name)
+    {
+      dealii::ParameterHandler prm;
+      prm.add_parameter("GeometryType", geometry_type);
+      prm.add_parameter("NRefinements", n_refinements);
+      prm.add_parameter("Degree", degree);
+      prm.add_parameter("SetupOnlyFastAlgorithm", setup_only_fast_algorithm);
+      prm.add_parameter("TestHighOrderMapping", test_high_order_mapping);
+      prm.add_parameter("Categorize", categorize);
+      prm.add_parameter("VectorizationType", vectorization_type);
+      prm.add_parameter("PrintDetail", print_details);
+
+      std::ifstream file;
+      file.open(file_name);
+      prm.parse_input_from_json(file, true);
+    }
+    
+    std::string  geometry_type             = "quadrant";
+    unsigned int n_refinements             = 6;
+    unsigned int degree                    = 4;
+    bool         setup_only_fast_algorithm = true;
+    bool         test_high_order_mapping   = false;
+    bool         categorize                = false;
+    std::string  vectorization_type        = "index";
+    bool         print_details             = true;
 };
 
 template <unsigned int dim, int fe_degree_precomiled>
 void
-run(const std::string  geometry_type,
-    const unsigned int min_n_refinements,
-    const unsigned int max_n_refinements,
-    const unsigned int degree_min,
-    const unsigned int degree_max,
-    const bool         setup_only_fast_algorithm,
-    const bool         test_high_order_mapping,
-    const bool         categorize,
-    const std::string  vectorization_type,
-    const bool         print_details)
+run(const std::vector<Parameters> & parameters_vector)
 {
   ConvergenceTable table;
-  
-  std::vector<Parameters> parameters_vector;
-
-  for (unsigned int n_refinements = min_n_refinements;
-       n_refinements <= max_n_refinements;
-       ++n_refinements)
-    for (unsigned int degree = degree_min; degree <= degree_max; ++degree)
-      {
-        Parameters parameters;
-        
-        parameters.geometry_type = geometry_type;
-        parameters.n_refinements = n_refinements;
-        parameters.degree = degree;
-        parameters.setup_only_fast_algorithm = setup_only_fast_algorithm;
-        parameters.test_high_order_mapping = test_high_order_mapping;
-        parameters.categorize = categorize;
-        parameters.vectorization_type = vectorization_type;
-        parameters.print_details = print_details;
-        
-        parameters_vector.emplace_back(parameters);
-      }
-  
   
   for (const auto & param : parameters_vector)
       {
@@ -218,25 +206,46 @@ main(int argc, char **argv)
 
   const std::string geometry_type =
     argc > 1 ? std::string(argv[1]) : "quadrant";
-  const unsigned int min_n_refinements = argc > 2 ? atoi(argv[2]) : 6;
-  const unsigned int max_n_refinements = argc > 3 ? atoi(argv[3]) : 6;
-  const unsigned int degree_min        = argc > 4 ? atoi(argv[4]) : 1;
-  const unsigned int degree_max        = argc > 5 ? atoi(argv[5]) : degree_min;
-  const bool         test_high_order_mapping = argc > 6 ? atoi(argv[6]) : 0;
-  const bool         categorize              = argc > 7 ? atoi(argv[7]) : 0;
-  const std::string  vectorization_type =
-    argc > 8 ? std::string(argv[8]) : std::string("index");
-  const bool setup_only_fast_algorithm = false;
-  const bool print_details             = true;
+  
+  std::vector<Parameters> parameters_vector;
+  
+  if(geometry_type == "json")
+    {
+      for (int i = 2; i < argc; ++i)
+        parameters_vector.emplace_back(std::string(argv[i]));
+    }
+  else
+    {
+      const unsigned int min_n_refinements = argc > 2 ? atoi(argv[2]) : 6;
+      const unsigned int max_n_refinements = argc > 3 ? atoi(argv[3]) : 6;
+      const unsigned int degree_min        = argc > 4 ? atoi(argv[4]) : 1;
+      const unsigned int degree_max        = argc > 5 ? atoi(argv[5]) : degree_min;
+      const bool         test_high_order_mapping = argc > 6 ? atoi(argv[6]) : 0;
+      const bool         categorize              = argc > 7 ? atoi(argv[7]) : 0;
+      const std::string  vectorization_type =
+        argc > 8 ? std::string(argv[8]) : std::string("index");
+      const bool setup_only_fast_algorithm = false;
+      const bool print_details             = true;
 
-  run<dim, fe_degree_precomiled>(geometry_type,
-                                 min_n_refinements,
-                                 max_n_refinements,
-                                 degree_min,
-                                 degree_max,
-                                 setup_only_fast_algorithm,
-                                 test_high_order_mapping,
-                                 categorize,
-                                 vectorization_type,
-                                 print_details);
+      for (unsigned int n_refinements = min_n_refinements;
+           n_refinements <= max_n_refinements;
+           ++n_refinements)
+        for (unsigned int degree = degree_min; degree <= degree_max; ++degree)
+          {
+            Parameters parameters;
+
+            parameters.geometry_type = geometry_type;
+            parameters.n_refinements = n_refinements;
+            parameters.degree = degree;
+            parameters.setup_only_fast_algorithm = setup_only_fast_algorithm;
+            parameters.test_high_order_mapping = test_high_order_mapping;
+            parameters.categorize = categorize;
+            parameters.vectorization_type = vectorization_type;
+            parameters.print_details = print_details;
+
+            parameters_vector.emplace_back(parameters);
+          }
+    }
+
+  run<dim, fe_degree_precomiled>(parameters_vector);
 }

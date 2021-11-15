@@ -1,0 +1,10 @@
+{ 
+    "GeometryType" : "quadrant",
+    "NRefinements" : 6,
+    "Degree" : 4, 
+    "SetupOnlyFastAlgorithm" : false,
+    "TestHighOrderMapping" : false,
+    "Categorize" : false,
+    "VectorizationType" : "index",
+    "PrintDetail" : true
+}
