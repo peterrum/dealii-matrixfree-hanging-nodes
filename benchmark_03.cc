@@ -200,12 +200,12 @@ private:
     __device__ void
     operator()(
       const unsigned int                                          cell,
-      const typename CUDAWrappers::MatrixFree<dim, double>::Data *gpu_data,
-      CUDAWrappers::SharedData<dim, double> *                     shared_data,
-      const double *                                              src,
-      double *                                                    dst) const
+      const typename CUDAWrappers::MatrixFree<dim, Number>::Data *gpu_data,
+      CUDAWrappers::SharedData<dim, Number> *                     shared_data,
+      const Number *                                              src,
+      Number *                                                    dst) const
     {
-      CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, double>
+      CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, Number>
         fe_eval(cell, gpu_data, shared_data);
       fe_eval.read_dof_values(src);
       fe_eval.evaluate(false, true);
