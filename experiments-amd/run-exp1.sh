@@ -24,19 +24,6 @@
 #SBATCH --ntasks-per-node=48
 #SBATCH --cpus-per-task=1
 
-#module list
-
-#source ~/.bashrc
-# lscpu
-
-#module unload mkl mpi.intel intel
-#module load intel/19.0 mkl/2019
-#module load gcc/9
-#module unload mpi.intel
-#module load mpi.intel/2019_gcc
-#module load cmake
-#module load slurm_setup
-
 module unload intel-mpi/2019-intel
 module unload intel/19.0.5
 module load gcc/9
@@ -48,11 +35,5 @@ pwd
 array=($(ls run-exp1-a-*.json))
 mpirun -np  48 ./benchmark_01 json "${array[@]}" | tee exp1_annulus.txt
 
-array=($(ls run-exp1-b-*.json))
-mpirun -np  48 ./benchmark_01 json "${array[@]}" | tee exp1_annulus_mapping.txt
-
 array=($(ls run-exp1-c-*.json))
 mpirun -np  48 ./benchmark_01 json "${array[@]}" | tee exp1_quadrant.txt
-
-array=($(ls run-exp1-d-*.json))
-mpirun -np  48 ./benchmark_01 json "${array[@]}" | tee exp1_quadrant_mapping.txt
