@@ -334,26 +334,71 @@ run(const std::string geometry_type, const bool print_details = true)
 }
 
 /**
- * mpirun -np 40 ./benchmark_02 quadrant
+ * mpirun -np 40 ./benchmark_02 host quadrant 4
  */
 int
 main(int argc, char **argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
-  const unsigned int dim       = 3;
-  const int          fe_degree = 4;
+  const unsigned int dim = 3;
+
+  const std::string memory_type = argc > 1 ? std::string(argv[1]) : "host";
 
   const std::string geometry_type =
-    argc > 1 ? std::string(argv[1]) : "quadrant";
+    argc > 2 ? std::string(argv[2]) : "quadrant";
 
-  const std::string memory_type = argc > 2 ? std::string(argv[2]) : "host";
+  const unsigned int fe_degree = argc > 3 ? std::atoi(argv[3]) : 4;
 
   if (memory_type == "host")
-    run<dim, fe_degree, MemorySpace::Host>(geometry_type);
+    {
+      switch (fe_degree)
+        {
+          case 1:
+            run<dim, 1, MemorySpace::Host>(geometry_type);
+            break;
+          case 2:
+            run<dim, 2, MemorySpace::Host>(geometry_type);
+            break;
+          case 3:
+            run<dim, 3, MemorySpace::Host>(geometry_type);
+            break;
+          case 4:
+            run<dim, 4, MemorySpace::Host>(geometry_type);
+            break;
+          case 5:
+            run<dim, 5, MemorySpace::Host>(geometry_type);
+            break;
+          case 6:
+            run<dim, 6, MemorySpace::Host>(geometry_type);
+            break;
+        }
+    }
 #ifdef DEAL_II_COMPILER_CUDA_AWARE
   else if (memory_type == "cuda")
-    run<dim, fe_degree, MemorySpace::CUDA>(geometry_type);
+    {
+      switch (fe_degree)
+        {
+          case 1:
+            run<dim, 1, MemorySpace::CUDA>(geometry_type);
+            break;
+          case 2:
+            run<dim, 2, MemorySpace::CUDA>(geometry_type);
+            break;
+          case 3:
+            run<dim, 3, MemorySpace::CUDA>(geometry_type);
+            break;
+          case 4:
+            run<dim, 4, MemorySpace::CUDA>(geometry_type);
+            break;
+          case 5:
+            run<dim, 5, MemorySpace::CUDA>(geometry_type);
+            break;
+          case 6:
+            run<dim, 6, MemorySpace::CUDA>(geometry_type);
+            break;
+        }
+    }
 #endif
   else
     AssertThrow(false, ExcNotImplemented());
