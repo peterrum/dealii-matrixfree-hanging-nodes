@@ -255,7 +255,7 @@ run(const std::string geometry_type, const bool print_details = true)
 
   const unsigned n_repetitions = 100;
 
-  for (unsigned int n_refinements = 4; n_refinements <= 6; ++n_refinements)
+  for (unsigned int n_refinements = 4; n_refinements <= 12; ++n_refinements)
     {
       parallel::distributed::Triangulation<dim> tria(comm);
 
@@ -268,6 +268,7 @@ run(const std::string geometry_type, const bool print_details = true)
 
       table.add_value("n_levels", tria.n_global_levels());
       table.add_value("degree", degree);
+      table.add_value("geometry_type", geometry_type);
 
       const MappingQ1<dim> mapping;
       const FE_Q<dim>      fe(degree);
@@ -275,6 +276,8 @@ run(const std::string geometry_type, const bool print_details = true)
 
       DoFHandler<dim> dof_handler(tria);
       dof_handler.distribute_dofs(fe);
+
+      table.add_value("n_dofs", dof_handler.n_dofs());
 
       AffineConstraints<Number> constraints;
 
