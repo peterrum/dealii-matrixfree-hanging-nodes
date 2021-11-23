@@ -13,6 +13,8 @@
 #include <deal.II/matrix_free/fe_evaluation.h>
 #include <deal.II/matrix_free/matrix_free.h>
 
+#include <deal.II/numerics/vector_tools.h>
+
 using namespace dealii;
 
 namespace dealii
@@ -242,6 +244,26 @@ private:
 
 
 
+template <int dim, typename T>
+class AnalyticalFunction : public Function<dim, T>
+{
+public:
+  virtual T
+  value(const Point<dim, T> &p, const unsigned int component = 0) const
+  {
+    (void)component;
+
+    double temp = 0.0;
+
+    for (unsigned int d = 0; d < dim; ++d)
+      temp += std::sin(p[d]);
+
+    return temp;
+  }
+};
+
+
+
 template <unsigned int dim, const int degree, typename MemorySpace>
 void
 run(const std::string geometry_type, const bool print_details = true)
@@ -289,7 +311,21 @@ run(const std::string geometry_type, const bool print_details = true)
       laplace_operator.initialize_dof_vector(src);
       laplace_operator.initialize_dof_vector(dst);
 
-      src = 1.0;
+      {
+        LinearAlgebra::distributed::Vector<Number> src_host(
+          src.get_partitioner());
+
+        VectorTools::interpolate(dof_handler,
+                                 AnalyticalFunction<dim, Number>(),
+                                 src_host);
+
+        LinearAlgebra::ReadWriteVector<Number> rw_vector(
+          src.get_partitioner()->locally_owned_range());
+        rw_vector.import(src_host, VectorOperation::insert);
+        src.import(rw_vector, VectorOperation::insert);
+
+        dst = 0.0;
+      }
 
       double min_time = 1e10;
       double max_time = 0;
