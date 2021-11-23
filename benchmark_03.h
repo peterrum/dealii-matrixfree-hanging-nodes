@@ -292,6 +292,8 @@ run(const std::string geometry_type, const bool print_details = true)
       src = 1.0;
 
       double min_time = 1e10;
+      double max_time = 0;
+      double avg_time = 0;
 
       for (unsigned int i = 0; i < n_repetitions; ++i)
         {
@@ -304,23 +306,34 @@ run(const std::string geometry_type, const bool print_details = true)
 
           MPI_Barrier(MPI_COMM_WORLD);
 
-          min_time = std::min<double>(
-            min_time,
+          const double dt =
             std::chrono::duration_cast<std::chrono::nanoseconds>(
               std::chrono::system_clock::now() - temp)
-                .count() /
-              1e9);
+              .count() /
+            1e9;
+
+          min_time = std::min(min_time, dt);
+          max_time = std::max(max_time, dt);
+          avg_time += dt;
         }
 
       min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
+      max_time = Utilities::MPI::max(max_time, MPI_COMM_WORLD);
+      avg_time = Utilities::MPI::sum(avg_time, MPI_COMM_WORLD) /
+                 Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD);
 
-      if (print_details)
-        {
-          table.add_value("n_dofs", src.size());
-        }
+      table.add_value("time_min", min_time);
+      table.set_scientific("time_min", true);
+      table.add_value("time_max", max_time);
+      table.set_scientific("time_max", true);
+      table.add_value("time_avg", avg_time);
+      table.set_scientific("time_avg", true);
 
-      table.add_value("time", min_time);
-      table.set_scientific("time", true);
+      table.add_value("norm_src", src.l2_norm());
+      table.set_scientific("norm_src", true);
+
+      table.add_value("norm_dst", dst.l2_norm());
+      table.set_scientific("norm_dst", true);
 
       if (print_details && Utilities::MPI::this_mpi_process(comm) == 0)
         {
