@@ -15,6 +15,8 @@
 
 #include <deal.II/numerics/vector_tools.h>
 
+#include "constraint_helper.h"
+
 using namespace dealii;
 
 namespace dealii
@@ -291,6 +293,30 @@ run(const std::string geometry_type, const bool print_details = true)
       table.add_value("n_levels", tria.n_global_levels());
       table.add_value("degree", degree);
       table.add_value("geometry_type", geometry_type);
+
+      table.add_value("n_cells", tria.n_global_active_cells());
+
+      types::global_cell_index n_cells_w_hn  = 0;
+      types::global_cell_index n_cells_wo_hn = 0;
+
+      Helper<dim> helper(tria);
+
+      for (const auto &cell : tria.active_cell_iterators())
+        if (cell->is_locally_owned())
+          {
+            if (helper.is_constrained(cell))
+              n_cells_w_hn++;
+            else
+              n_cells_wo_hn++;
+          }
+
+      n_cells_w_hn  = Utilities::MPI::sum(n_cells_w_hn, MPI_COMM_WORLD);
+      n_cells_wo_hn = Utilities::MPI::sum(n_cells_wo_hn, MPI_COMM_WORLD);
+
+      AssertThrow(tria.n_global_active_cells() == n_cells_w_hn + n_cells_wo_hn,
+                  ExcInternalError());
+
+      table.add_value("n_cells_hn", n_cells_w_hn);
 
       const MappingQ1<dim> mapping;
       const FE_Q<dim>      fe(degree);
