@@ -107,6 +107,81 @@ namespace dealii
 
 
 
+
+template <int dim,
+          int fe_degree,
+          int n_q_points_1d,
+          int n_components_,
+          typename Number,
+          typename VectorizedArrayType = VectorizedArray<Number>>
+class FEEvaluationOwn : public FEEvaluation<dim,
+                                            fe_degree,
+                                            n_q_points_1d,
+                                            n_components_,
+                                            Number,
+                                            VectorizedArrayType>
+{
+public:
+  FEEvaluationOwn(
+    const MatrixFree<dim, Number, VectorizedArrayType> &matrix_free,
+    const unsigned int                                  dof_no  = 0,
+    const unsigned int                                  quad_no = 0,
+    const unsigned int first_selected_component                 = 0,
+    const unsigned int active_fe_index   = numbers::invalid_unsigned_int,
+    const unsigned int active_quad_index = numbers::invalid_unsigned_int)
+    : FEEvaluation<dim,
+                   fe_degree,
+                   n_q_points_1d,
+                   n_components_,
+                   Number,
+                   VectorizedArrayType>(matrix_free,
+                                        dof_no,
+                                        quad_no,
+                                        first_selected_component,
+                                        active_fe_index,
+                                        active_quad_index)
+  {}
+
+  template <typename VectorType>
+  inline void
+  distribute_local_to_global_plain(
+    VectorType &                                    dst,
+    const unsigned int                              first_index = 0,
+    const std::bitset<VectorizedArrayType::size()> &mask =
+      std::bitset<VectorizedArrayType::size()>().flip()) const
+  {
+#ifdef DEBUG
+    Assert(dof_values_initialized == true,
+           internal::ExcAccessToUninitializedField());
+#endif
+
+    const auto dst_data = internal::get_vector_data<n_components_>(
+      dst,
+      first_index,
+      this->dof_access_index ==
+        internal::MatrixFreeFunctions::DoFInfo::dof_access_cell,
+      this->active_fe_index,
+      this->dof_info);
+
+    internal::VectorDistributorLocalToGlobal<Number, VectorizedArrayType>
+      distributor;
+    this->read_write_operation(distributor,
+                               dst_data.first,
+                               dst_data.second,
+                               mask);
+  }
+
+  template <bool transpose>
+  void
+  apply_hanging_node_constraints()
+  {
+    FEEvaluationBase<dim, n_components_, Number, false, VectorizedArrayType>::
+      template apply_hanging_node_constraints<transpose>();
+  }
+};
+
+
+
 template <int dim, int fe_degree, typename Number, typename MemorySpace>
 class LaplaceOperator;
 
@@ -120,13 +195,10 @@ public:
   LaplaceOperator(const Mapping<dim> &             mapping,
                   const DoFHandler<dim> &          dof_handler,
                   const AffineConstraints<Number> &constraints,
-                  const Quadrature<1> &            quadrature, const bool apply_constraints)
+                  const Quadrature<1> &            quadrature, const bool apply_constraints) : apply_constraints(apply_constraints)
   {
     typename MatrixFree<dim, Number>::AdditionalData additional_data;
     additional_data.mapping_update_flags = update_gradients;
-    
-    if(apply_constraints == false)
-    additional_data.use_fast_hanging_node_algorithm = false;
 
     matrix_free.reinit(
       mapping, dof_handler, constraints, quadrature, additional_data);
@@ -151,18 +223,29 @@ private:
               const VectorType &                           src,
               const std::pair<unsigned int, unsigned int> &cell_range) const
   {
-    FEEvaluation<dim, fe_degree, fe_degree + 1, 1, Number> phi(data);
+    FEEvaluationOwn<dim, fe_degree, fe_degree + 1, 1, Number> phi(data);
     for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
       {
         phi.reinit(cell);
-        phi.read_dof_values(src);
+        
+        if(apply_constraints)
+          phi.read_dof_values(src);
+        else
+          phi.read_dof_values_plain(src);
+            
         phi.evaluate(false, true);
         for (unsigned int q = 0; q < phi.n_q_points; ++q)
           phi.submit_gradient(phi.get_gradient(q), q);
         phi.integrate(false, true);
-        phi.distribute_local_to_global(dst);
+        
+        if(apply_constraints)
+          phi.distribute_local_to_global(dst);
+        else
+          phi.distribute_local_to_global_plain(dst);
       }
   }
+  
+  const bool apply_constraints;
 
   MatrixFree<dim, Number> matrix_free;
 };
