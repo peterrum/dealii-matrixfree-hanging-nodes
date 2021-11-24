@@ -366,6 +366,10 @@ run(const std::string geometry_type, const bool print_details = true)
 
           laplace_operator.vmult(dst, src);
 
+#ifdef DEAL_II_COMPILER_CUDA_AWARE
+          cudaDeviceSynchronize();
+#endif
+
           MPI_Barrier(MPI_COMM_WORLD);
 
           const double dt =
