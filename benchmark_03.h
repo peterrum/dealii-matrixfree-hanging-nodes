@@ -120,10 +120,13 @@ public:
   LaplaceOperator(const Mapping<dim> &             mapping,
                   const DoFHandler<dim> &          dof_handler,
                   const AffineConstraints<Number> &constraints,
-                  const Quadrature<1> &            quadrature)
+                  const Quadrature<1> &            quadrature, const bool apply_constraints)
   {
     typename MatrixFree<dim, Number>::AdditionalData additional_data;
     additional_data.mapping_update_flags = update_gradients;
+    
+    if(apply_constraints == false)
+    additional_data.use_fast_hanging_node_algorithm = false;
 
     matrix_free.reinit(
       mapping, dof_handler, constraints, quadrature, additional_data);
@@ -216,8 +219,10 @@ public:
   LaplaceOperator(const Mapping<dim> &             mapping,
                   const DoFHandler<dim> &          dof_handler,
                   const AffineConstraints<Number> &constraints,
-                  const Quadrature<1> &            quadrature)
+                  const Quadrature<1> &            quadrature, const bool apply_constraints)
   {
+    AssertThrow(apply_constraints, ExcNotImplemented());
+      
     typename CUDAWrappers::MatrixFree<dim, Number>::AdditionalData
       additional_data;
     additional_data.mapping_update_flags = update_gradients;
@@ -328,9 +333,11 @@ run(const std::string geometry_type, const bool print_details = true)
       table.add_value("n_dofs", dof_handler.n_dofs());
 
       AffineConstraints<Number> constraints;
+      
+      const auto run = [&](const bool apply_constraints) -> std::array<double, 3>{
 
       LaplaceOperator<dim, degree, Number, MemorySpace> laplace_operator(
-        mapping, dof_handler, constraints, quadrature);
+        mapping, dof_handler, constraints, quadrature, apply_constraints);
 
       VectorType src, dst;
 
@@ -386,20 +393,34 @@ run(const std::string geometry_type, const bool print_details = true)
       min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
       max_time = Utilities::MPI::max(max_time, MPI_COMM_WORLD);
       avg_time = Utilities::MPI::sum(avg_time, MPI_COMM_WORLD) /
-                 Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD);
+                 Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) / n_repetitions;
+      
+      return {{min_time, max_time, avg_time}};
+      };
+      
+      if(true)
+        {
+          const auto time = run(true);
 
-      table.add_value("time_min", min_time);
-      table.set_scientific("time_min", true);
-      table.add_value("time_max", max_time);
-      table.set_scientific("time_max", true);
-      table.add_value("time_avg", avg_time);
-      table.set_scientific("time_avg", true);
+          table.add_value("time_min", time[0]);
+          table.set_scientific("time_min", true);
+          table.add_value("time_max", time[1]);
+          table.set_scientific("time_max", true);
+          table.add_value("time_avg", time[2]);
+          table.set_scientific("time_avg", true);
+        }
+      
+      if(std::is_same<MemorySpace, typename MemorySpace::Host>::value)
+        {
+          const auto time = run(false);
 
-      table.add_value("norm_src", src.l2_norm());
-      table.set_scientific("norm_src", true);
-
-      table.add_value("norm_dst", dst.l2_norm());
-      table.set_scientific("norm_dst", true);
+          table.add_value("time_no_min", time[0]);
+          table.set_scientific("time_no_min", true);
+          table.add_value("time_no_max", time[1]);
+          table.set_scientific("time_no_max", true);
+          table.add_value("time_no_avg", time[2]);
+          table.set_scientific("time_no_avg", true);
+        }
 
       if (print_details && Utilities::MPI::this_mpi_process(comm) == 0)
         {
