@@ -39,6 +39,7 @@ run(const std::vector<Parameters> & parameters_vector)
   
   for (const auto & param : parameters_vector)
       {
+/*
         if (param.vectorization_type == "index")
           {
             AssertThrow(
@@ -80,7 +81,7 @@ run(const std::vector<Parameters> & parameters_vector)
           {
             AssertThrow(false, ExcInternalError());
           }
-        
+ */      
         
         Test<dim, fe_degree_precomiled> test(param.degree,
                                              param.geometry_type,
