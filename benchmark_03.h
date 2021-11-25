@@ -151,7 +151,7 @@ public:
       std::bitset<VectorizedArrayType::size()>().flip()) const
   {
 #ifdef DEBUG
-    Assert(dof_values_initialized == true,
+    Assert(this->dof_values_initialized == true,
            internal::ExcAccessToUninitializedField());
 #endif
 
@@ -227,24 +227,24 @@ private:
     for (unsigned int cell = cell_range.first; cell < cell_range.second; ++cell)
       {
         phi.reinit(cell);
-        
+
         if(apply_constraints)
           phi.read_dof_values(src);
         else
           phi.read_dof_values_plain(src);
-            
+
         phi.evaluate(false, true);
         for (unsigned int q = 0; q < phi.n_q_points; ++q)
           phi.submit_gradient(phi.get_gradient(q), q);
         phi.integrate(false, true);
-        
+
         if(apply_constraints)
           phi.distribute_local_to_global(dst);
         else
           phi.distribute_local_to_global_plain(dst);
       }
   }
-  
+
   const bool apply_constraints;
 
   MatrixFree<dim, Number> matrix_free;
@@ -305,7 +305,7 @@ public:
                   const Quadrature<1> &            quadrature, const bool apply_constraints)
   {
     AssertThrow(apply_constraints, ExcNotImplemented());
-      
+
     typename CUDAWrappers::MatrixFree<dim, Number>::AdditionalData
       additional_data;
     additional_data.mapping_update_flags = update_gradients;
@@ -416,7 +416,7 @@ run(const std::string geometry_type, const bool print_details = true)
       table.add_value("n_dofs", dof_handler.n_dofs());
 
       AffineConstraints<Number> constraints;
-      
+
       const auto run = [&](const bool apply_constraints) -> std::array<double, 3>{
 
       LaplaceOperator<dim, degree, Number, MemorySpace> laplace_operator(
@@ -477,10 +477,10 @@ run(const std::string geometry_type, const bool print_details = true)
       max_time = Utilities::MPI::max(max_time, MPI_COMM_WORLD);
       avg_time = Utilities::MPI::sum(avg_time, MPI_COMM_WORLD) /
                  Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) / n_repetitions;
-      
+
       return {{min_time, max_time, avg_time}};
       };
-      
+
       if(true)
         {
           const auto time = run(true);
@@ -492,8 +492,8 @@ run(const std::string geometry_type, const bool print_details = true)
           table.add_value("time_avg", time[2]);
           table.set_scientific("time_avg", true);
         }
-      
-      if(std::is_same<MemorySpace, typename MemorySpace::Host>::value)
+
+      if(std::is_same<MemorySpace, dealii::MemorySpace::Host>::value)
         {
           const auto time = run(false);
 
