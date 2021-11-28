@@ -146,7 +146,7 @@ template <int dim, int fe_degree_precomiled>
 class Test
 {
 public:
-  using Number              = float;
+  using Number              = double;
   using VectorizedArrayType = VectorizedArray<Number>;
   using VectorType0         = Vector<Number>;
   using VectorType1         = AlignedVector<VectorizedArrayType>;

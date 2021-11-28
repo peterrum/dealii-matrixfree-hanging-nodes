@@ -144,6 +144,29 @@ public:
 
   template <typename VectorType>
   inline void
+  read_dof_values_plain(const VectorType & src,
+                        const unsigned int first_index = 0,
+                        const std::bitset<VectorizedArrayType::size()> &mask =
+                          std::bitset<VectorizedArrayType::size()>().flip())
+  {
+    const auto src_data = internal::get_vector_data<n_components_>(
+      src,
+      first_index,
+      this->dof_access_index ==
+        internal::MatrixFreeFunctions::DoFInfo::dof_access_cell,
+      this->active_fe_index,
+      this->dof_info);
+
+    internal::VectorReader<Number, VectorizedArrayType> reader;
+    this->read_write_operation(reader, src_data.first, src_data.second, mask);
+
+#ifdef DEBUG
+    dof_values_initialized = true;
+#endif
+  }
+
+  template <typename VectorType>
+  inline void
   distribute_local_to_global_plain(
     VectorType &                                    dst,
     const unsigned int                              first_index = 0,
