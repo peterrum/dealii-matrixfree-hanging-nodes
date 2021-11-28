@@ -9,12 +9,14 @@ run(const std::string  geometry_type,
     const bool         do_apply_constraints,
     const bool         do_apply_quadrature_kernel,
     const bool         use_fast_hanging_node_algorithm,
+    const bool         test_high_order_mapping,
     const bool         setup_only_fast_algorithm)
 {
   Test<dim, fe_degree_precomiled> test(degree,
                                        geometry_type,
                                        n_refinements,
-                                       setup_only_fast_algorithm);
+                                       setup_only_fast_algorithm,
+                                       test_high_order_mapping);
 
   ConvergenceTable table;
 
@@ -68,6 +70,7 @@ main(int argc, char **argv)
   const bool         do_apply_constraints       = argc > 5 ? atoi(argv[5]) : 1;
   const bool         do_apply_quadrature_kernel = argc > 6 ? atoi(argv[6]) : 0;
   const bool use_fast_hanging_node_algorithm    = argc > 7 ? atoi(argv[7]) : 1;
+  const bool test_high_order_mapping            = argc > 8 ? atoi(argv[8]) : 0;
   const bool setup_only_fast_algorithm          = false;
 
   run<dim, fe_degree_precomiled>(geometry_type,
@@ -77,6 +80,7 @@ main(int argc, char **argv)
                                  do_apply_constraints,
                                  do_apply_quadrature_kernel,
                                  use_fast_hanging_node_algorithm,
+                                 test_high_order_mapping,
                                  setup_only_fast_algorithm);
 
 #ifdef LIKWID_PERFMON
