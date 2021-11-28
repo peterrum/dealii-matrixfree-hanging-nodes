@@ -10,8 +10,8 @@
 #include <deal.II/matrix_free/matrix_free.h>
 
 #ifdef LIKWID_PERFMON
-#  include <likwid.h>
 #  include <likwid-marker.h>
+#  include <likwid.h>
 #endif
 
 #include "benchmark.h"
@@ -78,6 +78,29 @@ public:
                                         active_fe_index,
                                         active_quad_index)
   {}
+
+  template <typename VectorType>
+  inline void
+  read_dof_values_plain(const VectorType & src,
+                        const unsigned int first_index = 0,
+                        const std::bitset<VectorizedArrayType::size()> &mask =
+                          std::bitset<VectorizedArrayType::size()>().flip())
+  {
+    const auto src_data = internal::get_vector_data<n_components_>(
+      src,
+      first_index,
+      this->dof_access_index ==
+        internal::MatrixFreeFunctions::DoFInfo::dof_access_cell,
+      this->active_fe_index,
+      this->dof_info);
+
+    internal::VectorReader<Number, VectorizedArrayType> reader;
+    this->read_write_operation(reader, src_data.first, src_data.second, mask);
+
+#ifdef DEBUG
+    dof_values_initialized = true;
+#endif
+  }
 
   template <typename VectorType>
   inline void
@@ -221,18 +244,18 @@ public:
 
     const FE_Q<dim>   fe(degree);
     const QGauss<dim> quadrature(degree + 1);
-    
+
     dof_handler.distribute_dofs(fe);
-    
+
     AffineConstraints<Number> constraints;
 
     typename MatrixFree<dim, Number, VectorizedArrayType>::AdditionalData
       additional_data;
     additional_data.mapping_update_flags = update_gradients;
-    
+
     matrix_free.reinit(
       *mapping, dof_handler, constraints, quadrature, additional_data);
-    
+
     if (categorize)
       {
         additional_data.cell_vectorization_category.assign(
@@ -260,7 +283,7 @@ public:
         matrix_free.reinit(
           *mapping, dof_handler, constraints, quadrature, additional_data);
       }
-    
+
     if (setup_only_fast_algorithm == false)
       {
         DoFTools::make_hanging_node_constraints(dof_handler, constraints);
