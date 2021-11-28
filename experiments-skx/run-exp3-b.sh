@@ -2,8 +2,8 @@
 # Job Name and Files (also --job-name)
 #SBATCH -J LIKWID
 #Output and error (also --output, --error):
-#SBATCH -o run-exp3-a.out
-#SBATCH -e run-exp3-a.e
+#SBATCH -o run-exp3-b.out
+#SBATCH -e run-exp3-b.e
 #Initial working directory (also --chdir):
 #SBATCH -D ./
 #Notification and type
