@@ -53,7 +53,7 @@ run(const unsigned int degree)
   for (unsigned int i = 0; i < 100; ++i)
     internal::
       FEEvaluationHangingNodesFactory<dim, Number, VectorizedArrayType>::apply(
-        1, degree, fe_eval, false, mask, data.begin());
+        1, degree, fe_eval.get_shape_info(), false, mask, data.begin());
 
 #ifdef LIKWID_PERFMON
   LIKWID_MARKER_STOP("kernel");

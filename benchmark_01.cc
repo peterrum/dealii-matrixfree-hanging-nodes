@@ -40,33 +40,27 @@ get_hn_runner_type(const unsigned int fe_degree)
       case 1:
         return internal::FEEvaluationImplHangingNodes<
           dim,
-          VectorizedArray<double>,
-          false>::template used_runner_type<1>();
+          VectorizedArray<double>>::template used_runner_type<1>();
       case 2:
         return internal::FEEvaluationImplHangingNodes<
           dim,
-          VectorizedArray<double>,
-          false>::template used_runner_type<2>();
+          VectorizedArray<double>>::template used_runner_type<2>();
       case 3:
         return internal::FEEvaluationImplHangingNodes<
           dim,
-          VectorizedArray<double>,
-          false>::template used_runner_type<3>();
+          VectorizedArray<double>>::template used_runner_type<3>();
       case 4:
         return internal::FEEvaluationImplHangingNodes<
           dim,
-          VectorizedArray<double>,
-          false>::template used_runner_type<4>();
+          VectorizedArray<double>>::template used_runner_type<4>();
       case 5:
         return internal::FEEvaluationImplHangingNodes<
           dim,
-          VectorizedArray<double>,
-          false>::template used_runner_type<5>();
+          VectorizedArray<double>>::template used_runner_type<5>();
       case 6:
         return internal::FEEvaluationImplHangingNodes<
           dim,
-          VectorizedArray<double>,
-          false>::template used_runner_type<6>();
+          VectorizedArray<double>>::template used_runner_type<6>();
       default:
         AssertThrow(false, ExcNotImplemented());
         return internal::FEEvaluationImplHangingNodesRunnerTypes::scalar;
@@ -84,43 +78,37 @@ get_hn_vectorization_type(const unsigned int fe_degree)
           internal::FEEvaluationImplHangingNodesRunnerTypes::scalar,
           dim,
           1,
-          VectorizedArray<double>,
-          false>::VectorizationType;
+          VectorizedArray<double>>::VectorizationType;
       case 2:
         return internal::FEEvaluationImplHangingNodesRunner<
           internal::FEEvaluationImplHangingNodesRunnerTypes::scalar,
           dim,
           2,
-          VectorizedArray<double>,
-          false>::VectorizationType;
+          VectorizedArray<double>>::VectorizationType;
       case 3:
         return internal::FEEvaluationImplHangingNodesRunner<
           internal::FEEvaluationImplHangingNodesRunnerTypes::scalar,
           dim,
           3,
-          VectorizedArray<double>,
-          false>::VectorizationType;
+          VectorizedArray<double>>::VectorizationType;
       case 4:
         return internal::FEEvaluationImplHangingNodesRunner<
           internal::FEEvaluationImplHangingNodesRunnerTypes::scalar,
           dim,
           4,
-          VectorizedArray<double>,
-          false>::VectorizationType;
+          VectorizedArray<double>>::VectorizationType;
       case 5:
         return internal::FEEvaluationImplHangingNodesRunner<
           internal::FEEvaluationImplHangingNodesRunnerTypes::scalar,
           dim,
           5,
-          VectorizedArray<double>,
-          false>::VectorizationType;
+          VectorizedArray<double>>::VectorizationType;
       case 6:
         return internal::FEEvaluationImplHangingNodesRunner<
           internal::FEEvaluationImplHangingNodesRunnerTypes::scalar,
           dim,
           6,
-          VectorizedArray<double>,
-          false>::VectorizationType;
+          VectorizedArray<double>>::VectorizationType;
       default:
         AssertThrow(false, ExcNotImplemented());
         return internal::VectorizationTypes::index;

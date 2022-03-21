@@ -131,12 +131,11 @@ public:
                                mask);
   }
 
-  template <bool transpose>
   void
-  apply_hanging_node_constraints()
+  apply_hanging_node_constraints(const bool transpose)
   {
     FEEvaluationBase<dim, n_components_, Number, false, VectorizedArrayType>::
-      template apply_hanging_node_constraints<transpose>();
+      apply_hanging_node_constraints(transpose);
   }
 };
 
@@ -624,7 +623,7 @@ private:
   {
     this->gather_plain(phi, src);
 
-    phi.template apply_hanging_node_constraints<false>();
+    phi.apply_hanging_node_constraints(false);
   }
 
   void
@@ -652,7 +651,7 @@ private:
   void
   scatter(FEEval &phi, VectorType1 &dst)
   {
-    phi.template apply_hanging_node_constraints<true>();
+    phi.apply_hanging_node_constraints(true);
 
     scatter_plain(phi, dst);
   }
