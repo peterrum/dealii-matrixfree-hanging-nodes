@@ -98,7 +98,7 @@ public:
     this->read_write_operation(reader, src_data.first, src_data.second, mask);
 
 #ifdef DEBUG
-    dof_values_initialized = true;
+    this->dof_values_initialized = true;
 #endif
   }
 
@@ -111,7 +111,7 @@ public:
       std::bitset<VectorizedArrayType::size()>().flip()) const
   {
 #ifdef DEBUG
-    Assert(dof_values_initialized == true,
+    Assert(this->dof_values_initialized == true,
            internal::ExcAccessToUninitializedField());
 #endif
 

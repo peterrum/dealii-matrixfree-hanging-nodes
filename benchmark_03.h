@@ -160,7 +160,7 @@ public:
     this->read_write_operation(reader, src_data.first, src_data.second, mask);
 
 #ifdef DEBUG
-    dof_values_initialized = true;
+    this->dof_values_initialized = true;
 #endif
   }
 
