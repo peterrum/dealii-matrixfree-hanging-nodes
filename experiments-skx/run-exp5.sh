@@ -45,10 +45,10 @@ module load intel-mpi/2019-gcc
 
 pwd
 
-mpirun -np 48 ./benchmark_03 "host" "annulus"  1 | tee exp_cuda_annulus_1.txt
-mpirun -np 48 ./benchmark_03 "host" "annulus"  2 | tee exp_cuda_annulus_2.txt
-mpirun -np 48 ./benchmark_03 "host" "annulus"  3 | tee exp_cuda_annulus_3.txt
-mpirun -np 48 ./benchmark_03 "host" "annulus"  4 | tee exp_cuda_annulus_4.txt
-mpirun -np 48 ./benchmark_03 "host" "annulus"  5 | tee exp_cuda_annulus_5.txt
-mpirun -np 48 ./benchmark_03 "host" "annulus"  6 | tee exp_cuda_annulus_6.txt
+mpirun -np 48 ./benchmark_03 "host" "annulus"  1 | tee exp_5_skx_annulus_1.txt
+mpirun -np 48 ./benchmark_03 "host" "annulus"  2 | tee exp_5_skx_annulus_2.txt
+mpirun -np 48 ./benchmark_03 "host" "annulus"  3 | tee exp_5_skx_annulus_3.txt
+mpirun -np 48 ./benchmark_03 "host" "annulus"  4 | tee exp_5_skx_annulus_4.txt
+mpirun -np 48 ./benchmark_03 "host" "annulus"  5 | tee exp_5_skx_annulus_5.txt
+mpirun -np 48 ./benchmark_03 "host" "annulus"  6 | tee exp_5_skx_annulus_6.txt
 
