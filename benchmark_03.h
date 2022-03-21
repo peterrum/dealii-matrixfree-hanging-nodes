@@ -107,7 +107,6 @@ namespace dealii
 
 
 
-
 template <int dim,
           int fe_degree,
           int n_q_points_1d,
@@ -218,7 +217,9 @@ public:
   LaplaceOperator(const Mapping<dim> &             mapping,
                   const DoFHandler<dim> &          dof_handler,
                   const AffineConstraints<Number> &constraints,
-                  const Quadrature<1> &            quadrature, const bool apply_constraints) : apply_constraints(apply_constraints)
+                  const Quadrature<1> &            quadrature,
+                  const bool                       apply_constraints)
+    : apply_constraints(apply_constraints)
   {
     typename MatrixFree<dim, Number>::AdditionalData additional_data;
     additional_data.mapping_update_flags = update_gradients;
@@ -251,7 +252,7 @@ private:
       {
         phi.reinit(cell);
 
-        if(apply_constraints)
+        if (apply_constraints)
           phi.read_dof_values(src);
         else
           phi.read_dof_values_plain(src);
@@ -261,7 +262,7 @@ private:
           phi.submit_gradient(phi.get_gradient(q), q);
         phi.integrate(false, true);
 
-        if(apply_constraints)
+        if (apply_constraints)
           phi.distribute_local_to_global(dst);
         else
           phi.distribute_local_to_global_plain(dst);
@@ -325,7 +326,8 @@ public:
   LaplaceOperator(const Mapping<dim> &             mapping,
                   const DoFHandler<dim> &          dof_handler,
                   const AffineConstraints<Number> &constraints,
-                  const Quadrature<1> &            quadrature, const bool apply_constraints)
+                  const Quadrature<1> &            quadrature,
+                  const bool                       apply_constraints)
   {
     AssertThrow(apply_constraints, ExcNotImplemented());
 
@@ -440,71 +442,72 @@ run(const std::string geometry_type, const bool print_details = true)
 
       AffineConstraints<Number> constraints;
 
-      const auto run = [&](const bool apply_constraints) -> std::array<double, 3>{
+      const auto run =
+        [&](const bool apply_constraints) -> std::array<double, 3> {
+        LaplaceOperator<dim, degree, Number, MemorySpace> laplace_operator(
+          mapping, dof_handler, constraints, quadrature, apply_constraints);
 
-      LaplaceOperator<dim, degree, Number, MemorySpace> laplace_operator(
-        mapping, dof_handler, constraints, quadrature, apply_constraints);
+        VectorType src, dst;
 
-      VectorType src, dst;
+        laplace_operator.initialize_dof_vector(src);
+        laplace_operator.initialize_dof_vector(dst);
 
-      laplace_operator.initialize_dof_vector(src);
-      laplace_operator.initialize_dof_vector(dst);
-
-      {
-        LinearAlgebra::distributed::Vector<Number> src_host(
-          src.get_partitioner());
-
-        VectorTools::interpolate(dof_handler,
-                                 AnalyticalFunction<dim, Number>(),
-                                 src_host);
-
-        LinearAlgebra::ReadWriteVector<Number> rw_vector(
-          src.get_partitioner()->locally_owned_range());
-        rw_vector.import(src_host, VectorOperation::insert);
-        src.import(rw_vector, VectorOperation::insert);
-
-        dst = 0.0;
-      }
-
-      double min_time = 1e10;
-      double max_time = 0;
-      double avg_time = 0;
-
-      for (unsigned int i = 0; i < n_repetitions; ++i)
         {
-          MPI_Barrier(MPI_COMM_WORLD);
+          LinearAlgebra::distributed::Vector<Number> src_host(
+            src.get_partitioner());
 
-          std::chrono::time_point<std::chrono::system_clock> temp =
-            std::chrono::system_clock::now();
+          VectorTools::interpolate(dof_handler,
+                                   AnalyticalFunction<dim, Number>(),
+                                   src_host);
 
-          laplace_operator.vmult(dst, src);
+          LinearAlgebra::ReadWriteVector<Number> rw_vector(
+            src.get_partitioner()->locally_owned_range());
+          rw_vector.import(src_host, VectorOperation::insert);
+          src.import(rw_vector, VectorOperation::insert);
 
-#ifdef DEAL_II_COMPILER_CUDA_AWARE
-          cudaDeviceSynchronize();
-#endif
-
-          MPI_Barrier(MPI_COMM_WORLD);
-
-          const double dt =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-              std::chrono::system_clock::now() - temp)
-              .count() /
-            1e9;
-
-          min_time = std::min(min_time, dt);
-          max_time = std::max(max_time, dt);
-          avg_time += dt;
+          dst = 0.0;
         }
 
-      min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
-      max_time = Utilities::MPI::max(max_time, MPI_COMM_WORLD);
-      avg_time = Utilities::MPI::sum(avg_time, MPI_COMM_WORLD) /
-                 Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) / n_repetitions;
+        double min_time = 1e10;
+        double max_time = 0;
+        double avg_time = 0;
 
-      return {{min_time, max_time, avg_time}};
+        for (unsigned int i = 0; i < n_repetitions; ++i)
+          {
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            std::chrono::time_point<std::chrono::system_clock> temp =
+              std::chrono::system_clock::now();
+
+            laplace_operator.vmult(dst, src);
+
+#ifdef DEAL_II_COMPILER_CUDA_AWARE
+            cudaDeviceSynchronize();
+#endif
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            const double dt =
+              std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::system_clock::now() - temp)
+                .count() /
+              1e9;
+
+            min_time = std::min(min_time, dt);
+            max_time = std::max(max_time, dt);
+            avg_time += dt;
+          }
+
+        min_time = Utilities::MPI::min(min_time, MPI_COMM_WORLD);
+        max_time = Utilities::MPI::max(max_time, MPI_COMM_WORLD);
+        avg_time = Utilities::MPI::sum(avg_time, MPI_COMM_WORLD) /
+                   Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) /
+                   n_repetitions;
+
+        return {{min_time, max_time, avg_time}};
       };
 
-      if(true)
+      if (true)
         {
           const auto time = run(true);
 
@@ -516,7 +519,7 @@ run(const std::string geometry_type, const bool print_details = true)
           table.set_scientific("time_avg", true);
         }
 
-      if(std::is_same<MemorySpace, dealii::MemorySpace::Host>::value)
+      if (std::is_same<MemorySpace, dealii::MemorySpace::Host>::value)
         {
           const auto time = run(false);
 
