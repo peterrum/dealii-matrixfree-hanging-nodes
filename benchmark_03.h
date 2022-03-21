@@ -257,10 +257,10 @@ private:
         else
           phi.read_dof_values_plain(src);
 
-        phi.evaluate(false, true);
+        phi.evaluate(EvaluationFlags::gradients);
         for (unsigned int q = 0; q < phi.n_q_points; ++q)
           phi.submit_gradient(phi.get_gradient(q), q);
-        phi.integrate(false, true);
+        phi.integrate(EvaluationFlags::gradients);
 
         if (apply_constraints)
           phi.distribute_local_to_global(dst);
@@ -305,10 +305,10 @@ public:
     CUDAWrappers::FEEvaluation<dim, fe_degree, fe_degree + 1, 1, Number>
       fe_eval(cell, gpu_data, shared_data);
     fe_eval.read_dof_values(src);
-    fe_eval.evaluate(false, true);
+    fe_eval.evaluate(EvaluationFlags::gradients);
     fe_eval.apply_for_each_quad_point(
       LaplaceOperatorQuad<dim, fe_degree, Number>());
-    fe_eval.integrate(false, true);
+    fe_eval.integrate(EvaluationFlags::gradients);
     fe_eval.distribute_local_to_global(dst);
   }
   static const unsigned int n_dofs_1d    = fe_degree + 1;
