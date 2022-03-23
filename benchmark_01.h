@@ -315,7 +315,8 @@ public:
 
     for (unsigned int cell = 0; cell < matrix_free.n_cell_batches(); ++cell)
       {
-        std::array<internal::MatrixFreeFunctions::ConstraintKinds, n_lanes>
+        std::array<internal::MatrixFreeFunctions::compressed_constraint_kind,
+                   n_lanes>
           constraint_mask;
 
         const unsigned int n_vectorization_actual =
@@ -328,21 +329,22 @@ public:
             const auto mask =
               matrix_free.get_dof_info().hanging_node_constraint_masks.size() ==
                   0 ?
-                internal::MatrixFreeFunctions::ConstraintKinds::unconstrained :
+                internal::MatrixFreeFunctions::
+                  unconstrained_compressed_constraint_kind :
                 matrix_free.get_dof_info()
                   .hanging_node_constraint_masks[cell * n_lanes + v];
             constraint_mask[v] = mask;
 
             hn_available |=
-              (mask !=
-               internal::MatrixFreeFunctions::ConstraintKinds::unconstrained);
+              (mask != internal::MatrixFreeFunctions::
+                         unconstrained_compressed_constraint_kind);
           }
 
         if (hn_available)
           {
             for (unsigned int v = n_vectorization_actual; v < n_lanes; ++v)
-              constraint_mask[v] =
-                internal::MatrixFreeFunctions::ConstraintKinds::unconstrained;
+              constraint_mask[v] = internal::MatrixFreeFunctions::
+                unconstrained_compressed_constraint_kind;
           }
 
         if (hn_available)
@@ -355,13 +357,15 @@ public:
 
             for (unsigned int v = 0; v < n_vectorization_actual; ++v)
               if (constraint_mask[v] !=
-                  internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
+                  internal::MatrixFreeFunctions::
+                    unconstrained_compressed_constraint_kind)
                 n_lanes_with_hn_same_local[static_cast<std::uint16_t>(
                   constraint_mask[v])] = 0;
 
             for (unsigned int v = 0; v < n_vectorization_actual; ++v)
               if (constraint_mask[v] !=
-                  internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
+                  internal::MatrixFreeFunctions::
+                    unconstrained_compressed_constraint_kind)
                 {
                   n_lanes_with_hn_counter++;
                   hn_types[static_cast<std::uint16_t>(constraint_mask[v])]++;
