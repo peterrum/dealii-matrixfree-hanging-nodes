@@ -70,13 +70,13 @@ run(const std::string &geometry_type,
               const auto mask =
                 matrix_free.get_dof_info()
                       .hanging_node_constraint_masks.size() == 0 ?
-                  internal::MatrixFreeFunctions::ConstraintKinds::
-                    unconstrained :
+                  internal::MatrixFreeFunctions::
+                    unconstrained_compressed_constraint_kind :
                   matrix_free.get_dof_info().hanging_node_constraint_masks
                     [cell * VectorizedArray<Number>::size() + v];
 
-              if (mask ==
-                  internal::MatrixFreeFunctions::ConstraintKinds::unconstrained)
+              if (mask == internal::MatrixFreeFunctions::
+                            unconstrained_compressed_constraint_kind)
                 n_cells_n++;
               else
                 n_cells_hn++;

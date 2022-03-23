@@ -29,20 +29,23 @@ run(const unsigned int degree)
                VectorizedArrayType>
     fe_eval(fe, quadrature, update_default);
 
-  std::array<internal::MatrixFreeFunctions::ConstraintKinds,
+  std::array<internal::MatrixFreeFunctions::compressed_constraint_kind,
              VectorizedArrayType::size()>
     mask;
 
-  std::fill(mask.begin(),
-            mask.end(),
-            internal::MatrixFreeFunctions::ConstraintKinds::unconstrained);
+  std::fill(
+    mask.begin(),
+    mask.end(),
+    internal::MatrixFreeFunctions::unconstrained_compressed_constraint_kind);
 
   const std::uint16_t quadrant        = 1;
   const std::uint16_t face_constraint = 7;
   const std::uint16_t edge_constraint = 0;
 
-  mask[0] = static_cast<internal::MatrixFreeFunctions::ConstraintKinds>(
-    quadrant + (face_constraint << 3) + (edge_constraint << 6));
+  mask[0] = internal::MatrixFreeFunctions::compress(
+    static_cast<internal::MatrixFreeFunctions::ConstraintKinds>(
+      quadrant + (face_constraint << 3) + (edge_constraint << 6)),
+    dim);
 
   AlignedVector<VectorizedArrayType> data(fe.n_dofs_per_cell());
 
