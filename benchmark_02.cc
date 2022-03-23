@@ -22,13 +22,14 @@ namespace dealii::parallel
                           const double                 weight)
   {
     return [&helper, weight](const auto &cell, const auto &) -> unsigned int {
+      const unsigned int base_weight = 1; // TODO remove
       if (cell->is_locally_owned() == false)
-        return 10000;
+        return base_weight + 10;
 
       if (helper.is_constrained(cell))
-        return 10000 * weight;
+        return base_weight + 10 * weight;
       else
-        return 10000;
+        return base_weight + 10;
     };
   }
 
@@ -81,7 +82,7 @@ run(const std::string  geometry_type,
       const auto weight_function =
         parallel::hanging_nodes_weighting(helper, weight / 100.);
 
-      tria_pdt.signals.cell_weight.connect(weight_function);
+      tria_pdt.signals.weight.connect(weight_function);
 
       tria_pdt.repartition();
 
@@ -222,6 +223,14 @@ run(const std::string  geometry_type,
         if (print_details)
           {
             table.add_value("n_dofs", src.size());
+            table.add_value(
+              "n_cells_min",
+              Utilities::MPI::min(tria.n_locally_owned_active_cells(),
+                                  MPI_COMM_WORLD));
+            table.add_value(
+              "n_cells_max",
+              Utilities::MPI::max(tria.n_locally_owned_active_cells(),
+                                  MPI_COMM_WORLD));
           }
 
         table.add_value(label + "_t", min_time);
